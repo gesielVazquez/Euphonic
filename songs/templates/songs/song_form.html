@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+  <h2 style="margin-bottom:1rem">
+    {% if object %}Editar «{{ object.title }}»{% else %}Nueva canción{% endif %}
+  </h2>
+  <form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+      <label>{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}
+        <div style="color:#f87171;font-size:0.85rem;margin-top:0.2rem">{{ field.errors.0 }}</div>
+      {% endif %}
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Guardar</button>
+    <a href="{% url 'song_list' %}" class="btn btn-outline">Cancelar</a>
+  </form>
+</div>
+
+{% endblock %}

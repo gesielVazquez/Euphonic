@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+  <h2>Playlists</h2>
+  <a href="{% url 'generate_playlist' %}" class="btn btn-primary">🎲 Generar nueva playlist</a>
+</div>
+
+{% if playlists %}
+  {% for pl in playlists %}
+    <a href="{% url 'playlist_detail' pl.pk %}" style="text-decoration:none">
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h3>Playlist #{{ pl.pk }}</h3>
+          <div class="meta">{{ pl.created_at|date:"d/m/Y H:i" }} · {{ pl.entries.count }} canciones · por {{ pl.created_by.username }}</div>
+        </div>
+        <span style="color:#a855f7;font-size:1.2rem">→</span>
+      </div>
+    </a>
+  {% endfor %}
+
+  {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page=1">«</a>
+        <a href="?page={{ page_obj.previous_page_number }}">‹</a>
+      {% endif %}
+      <span style="padding:0.3rem 0.7rem;color:#888">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}">›</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}">»</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="empty">
+    <p>No hay playlists todavía.</p>
+    <a href="{% url 'generate_playlist' %}" class="btn btn-primary">Generar primera playlist</a>
+  </div>
+{% endif %}
+
+{% endblock %}

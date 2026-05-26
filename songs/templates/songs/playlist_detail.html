@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load euphonic_extras %}
+{% block content %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+  <div>
+    <h2>Playlist #{{ playlist.pk }}</h2>
+    <div class="meta">{{ playlist.created_at|date:"d/m/Y H:i" }} · generada por {{ playlist.created_by.username }}</div>
+  </div>
+  <a href="{% url 'generate_playlist' %}" class="btn btn-primary">🎲 Generar otra</a>
+</div>
+
+{% for entry in playlist.entries.all %}
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="display:flex;align-items:center;gap:0.8rem">
+          <span style="color:#a855f7;font-weight:700;font-size:1.1rem">{{ entry.order }}.</span>
+          <div>
+            <h3>{{ entry.song.title }}</h3>
+            <div class="meta">{{ entry.song.artist }}{% if entry.song.genre %} · {{ entry.song.genre }}{% endif %}</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        {% if entry.song.spotify_url %}
+          <a href="{{ entry.song.spotify_url }}" target="_blank" class="btn btn-outline btn-sm">Spotify</a>
+        {% endif %}
+        {% if entry.song.tab_url %}
+          <a href="{{ entry.song.tab_url }}" target="_blank" class="btn btn-outline btn-sm">Tablatura</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="meta" style="margin-top:0.5rem">
+      <span class="stars">
+        {% with avg=entry.song.average_rating %}
+          {% if avg %}
+            {% for i in "12345" %}{% if forloop.counter <= avg %}★{% else %}☆{% endif %}{% endfor %}
+            ({{ avg|floatformat:1 }})
+          {% else %}
+            Sin calificar
+          {% endif %}
+        {% endwith %}
+      </span>
+      <span style="margin-left:1rem">
+        Tu rating:
+        <span class="stars">
+          {% with my=entry.song|user_rating:user %}
+            {% if my %}
+              {% for i in "12345" %}{% if forloop.counter <= my %}★{% else %}☆{% endif %}{% endfor %}
+              ({{ my }}/5)
+            {% else %}
+              —
+            {% endif %}
+          {% endwith %}
+        </span>
+      </span>
+    </div>
+  </div>
+{% endfor %}
+
+<div style="text-align:center;margin-top:1rem">
+  <a href="{% url 'playlist_list' %}" class="btn btn-outline">← Todas las playlists</a>
+</div>
+
+{% endblock %}

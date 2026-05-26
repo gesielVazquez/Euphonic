@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load euphonic_extras %}
+{% block content %}
+
+<div class="search-form">
+  <form method="get" style="display:flex;gap:0.5rem;width:100%">
+    <input type="text" name="q" placeholder="Buscar por título o artista…" value="{{ request.GET.q }}">
+    <button type="submit" class="btn btn-primary">Buscar</button>
+    {% if request.GET.q %}
+      <a href="{% url 'song_list' %}" class="btn btn-outline">Limpiar</a>
+    {% endif %}
+  </form>
+</div>
+
+{% if song_list %}
+  {% for song in song_list %}
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div>
+          <h3>{{ song.title }}</h3>
+          <div class="meta">{{ song.artist }}{% if song.genre %} · {{ song.genre }}{% endif %}</div>
+          <div class="meta" style="margin-top:0.3rem">
+            Promedio:
+            <span class="stars">
+              {% with avg=song.average_rating %}
+                {% if avg %}
+                  {% for i in "12345" %}{% if forloop.counter <= avg %}★{% else %}☆{% endif %}{% endfor %}
+                  ({{ avg|floatformat:1 }})
+                {% else %}
+                  —
+                {% endif %}
+              {% endwith %}
+            </span>
+          </div>
+        </div>
+        <div style="text-align:right;white-space:nowrap">
+          {% if song.spotify_url %}
+            <a href="{{ song.spotify_url }}" target="_blank" class="btn btn-outline btn-sm">Spotify</a>
+          {% endif %}
+          {% if song.tab_url %}
+            <a href="{{ song.tab_url }}" target="_blank" class="btn btn-outline btn-sm">Tablatura</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="meta" style="margin-top:0.6rem">
+        Tu calificación:
+        <span class="stars" style="font-size:1.3rem">
+          {% for i in "12345" %}
+            <form method="post" action="{% url 'rate_song' song.pk %}" style="display:inline;cursor:pointer">
+              {% csrf_token %}
+              <input type="hidden" name="value" value="{{ forloop.counter }}">
+              <button type="submit" style="background:none;border:none;padding:0;cursor:pointer;color:{% if user_ratings|dictget:song.pk and forloop.counter <= user_ratings|dictget:song.pk %}#facc15{% else %}#555{% endif %};font-size:1.3rem"
+                      title="{{ forloop.counter }} estrella{{ forloop.counter|pluralize:'s' }}">
+                ★
+              </button>
+            </form>
+          {% endfor %}
+          {% if user_ratings|dictget:song.pk %}
+            <span style="font-size:0.8rem;color:#888">({{ user_ratings|dictget:song.pk }}/5)</span>
+          {% endif %}
+        </span>
+      </div>
+
+      <div class="actions">
+        <a href="{% url 'song_update' song.pk %}" class="btn btn-primary btn-sm">Editar</a>
+        <form method="post" action="{% url 'song_delete' song.pk %}" class="inline-form">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar «{{ song.title }}»?')">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+
+  {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">«</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">‹</a>
+      {% endif %}
+      <span style="padding:0.3rem 0.7rem;color:#888">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">›</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">»</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="empty">
+    <p>No hay canciones todavía.</p>
+    <a href="{% url 'song_create' %}" class="btn btn-primary">Añadir primera canción</a>
+  </div>
+{% endif %}
+
+{% endblock %}
