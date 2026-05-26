@@ -93,7 +93,10 @@
         <span style="color:#888;font-size:0.85rem">{{ user.username }}</span>
         <a href="{% url 'playlist_list' %}">Playlists</a>
         <a href="{% url 'song_create' %}">+ Nueva canción</a>
-        <a href="{% url 'logout' %}">Cerrar sesión</a>
+        <form method="post" action="{% url 'logout' %}" style="display:inline">
+          {% csrf_token %}
+          <button type="submit" style="background:none;border:none;color:#a0a0c0;cursor:pointer;font-size:0.9rem">Cerrar sesión</button>
+        </form>
       {% else %}
         <a href="{% url 'login' %}">Iniciar sesión</a>
       {% endif %}
