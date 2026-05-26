@@ -28,7 +28,7 @@ class Song(models.Model):
     class Meta:
         verbose_name = "canción"
         verbose_name_plural = "canciones"
-        ordering = ["-created_at"]
+        ordering = ["artist", "title"]
 
     def average_rating(self):
         ratings = self.ratings.values_list("value", flat=True)
