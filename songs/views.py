@@ -4,8 +4,10 @@ from datetime import timedelta
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.utils import timezone
 from django.db.models import Q
 
@@ -77,13 +79,17 @@ def rate_song(request, pk):
     return redirect(request.META.get("HTTP_REFERER", "song_list"))
 
 
+@login_required
 def search_songs_view(request):
     results = []
     query = request.GET.get("q", "")
     if query:
         results = itunes_search(query)
+    paginator = Paginator(results, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
     return render(request, "songs/song_search.html", {
-        "results": results,
+        "page_obj": page_obj,
         "query": query,
     })
 

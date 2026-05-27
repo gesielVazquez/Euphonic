@@ -12,13 +12,13 @@
   </form>
 </div>
 
-{% if query and not results %}
+{% if query and page_obj.paginator.count == 0 %}
   <div class="empty">
     <p>Sin resultados para «{{ query }}».</p>
   </div>
 {% endif %}
 
-{% for r in results %}
+{% for r in page_obj %}
   <div class="card">
     <div style="display:flex;gap:1rem;align-items:start">
       {% if r.artwork_url %}
@@ -44,12 +44,24 @@
       </div>
     </div>
   </div>
-{% empty %}
-  {% if not query %}
+  {% empty %}
     <div class="empty">
       <p>Buscá canciones de iTunes para agregarlas rápidamente a Euphonic.</p>
     </div>
-  {% endif %}
 {% endfor %}
+
+{% if page_obj.paginator.num_pages > 1 %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+      <a href="?q={{ query|urlencode }}&page=1">«</a>
+      <a href="?q={{ query|urlencode }}&page={{ page_obj.previous_page_number }}">‹</a>
+    {% endif %}
+    <span style="padding:0.3rem 0.7rem;color:#888">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a href="?q={{ query|urlencode }}&page={{ page_obj.next_page_number }}">›</a>
+      <a href="?q={{ query|urlencode }}&page={{ page_obj.paginator.num_pages }}">»</a>
+    {% endif %}
+  </div>
+{% endif %}
 
 {% endblock %}

@@ -26,7 +26,7 @@ def search_songs(query, limit=15):
             "artist_name": item.get("artistName"),
             "album": item.get("collectionName"),
             "genre": item.get("primaryGenreName"),
-            "artwork_url": item.get("artworkUrl100", "").replace("100x100", "200x200"),
+            "artwork_url": (item.get("artworkUrl100") or "").replace("100x100", "200x200"),
             "track_view_url": item.get("trackViewUrl"),
             "preview_url": item.get("previewUrl"),
         })
