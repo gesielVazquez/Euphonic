@@ -214,6 +214,18 @@ def export_playlist_view(request, pk):
 
 
 @login_required
+def export_songs_view(request):
+    lines = ["Canciones en Euphonic", "=" * 40]
+    for song in Song.objects.all():
+        avg = song.average_rating()
+        rating_str = f"{avg:.1f}★" if avg else "—"
+        lines.append(f"{song.title} — {song.artist} | {song.genre or '—'} | {rating_str}")
+    lines.append(f"\nTotal: {Song.objects.count()} canciones.")
+    return render(request, "songs/playlist_export.txt", {"content": "\n".join(lines)},
+                  content_type="text/plain; charset=utf-8")
+
+
+@login_required
 def delete_playlist_view(request, pk):
     playlist = get_object_or_404(Playlist, pk=pk)
     if request.method == "POST":

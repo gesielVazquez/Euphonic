@@ -3,7 +3,7 @@ from .views import (
     SongListView, SongCreateView, SongUpdateView, SongDeleteView,
     rate_song, search_songs_view, generate_playlist,
     PlaylistListView, PlaylistDetailView,
-    dashboard_view, export_playlist_view, delete_playlist_view,
+    dashboard_view, export_songs_view, export_playlist_view, delete_playlist_view,
 )
 
 urlpatterns = [
@@ -11,6 +11,7 @@ urlpatterns = [
     path("nueva/", SongCreateView.as_view(), name="song_create"),
     path("buscar/", search_songs_view, name="song_search"),
     path("dashboard/", dashboard_view, name="dashboard"),
+    path("exportar/", export_songs_view, name="export_songs"),
     path("<int:pk>/editar/", SongUpdateView.as_view(), name="song_update"),
     path("<int:pk>/eliminar/", SongDeleteView.as_view(), name="song_delete"),
     path("<int:pk>/calificar/", rate_song, name="rate_song"),

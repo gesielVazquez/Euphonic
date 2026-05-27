@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2 style="margin-bottom:1.5rem">📊 Estadísticas</h2>
+<div class="flex-between mb-3">
+  <h2>📊 Estadísticas</h2>
+  <a href="{% url 'export_songs' %}" class="btn btn-outline">📄 Exportar canciones</a>
+</div>
 
 <div class="grid-stats">
   <div class="card" style="text-align:center;padding:1.5rem 1rem">
