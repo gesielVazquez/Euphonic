@@ -4,12 +4,13 @@ from datetime import timedelta
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q
 
 from .models import Song, Rating, Playlist, PlaylistSong
+from .itunes import search_songs as itunes_search
 
 
 class SongListView(LoginRequiredMixin, ListView):
@@ -37,6 +38,14 @@ class SongCreateView(LoginRequiredMixin, CreateView):
     model = Song
     fields = ["title", "artist", "genre", "spotify_url", "tab_url"]
     success_url = reverse_lazy("song_list")
+
+    def get_initial(self):
+        initial = super().get_initial()
+        for field in self.fields:
+            val = self.request.GET.get(field)
+            if val:
+                initial[field] = val
+        return initial
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
@@ -66,6 +75,17 @@ def rate_song(request, pk):
             )
             messages.success(request, f"Calificaste «{song.title}» con {value} estrellas.")
     return redirect(request.META.get("HTTP_REFERER", "song_list"))
+
+
+def search_songs_view(request):
+    results = []
+    query = request.GET.get("q", "")
+    if query:
+        results = itunes_search(query)
+    return render(request, "songs/song_search.html", {
+        "results": results,
+        "query": query,
+    })
 
 
 def _song_weight(song):

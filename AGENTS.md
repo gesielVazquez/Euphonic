@@ -11,15 +11,16 @@ Euphonic/
 ├── euphonic/         # Config Django (settings, urls, wsgi)
 ├── songs/            # App principal
 │   ├── models.py     # Song, Rating, Playlist, PlaylistSong
-│   ├── views.py      # CRUD, rate_song, generar playlist
+│   ├── views.py      # CRUD, rate_song, generar playlist, buscar canciones
 │   ├── urls.py       # Rutas de la app
 │   ├── admin.py      # Admin con inlines
+│   ├── itunes.py     # Cliente iTunes Search API
 │   ├── templatetags/ # Filtros personalizados (dictget, user_rating)
 │   ├── management/commands/setup_users.py  # Crear usuarios iniciales
 │   └── templates/
 │       ├── base.html
 │       ├── registration/login.html
-│       └── songs/    # song_list, song_form, playlist_list, playlist_detail
+│       └── songs/    # song_list, song_form, song_search, playlist_list, playlist_detail
 ├── requirements.txt
 ├── Procfile
 ├── runtime.txt
@@ -51,7 +52,8 @@ Euphonic/
 | Ruta | Vista |
 |------|-------|
 | `/` | Lista de canciones (agrupadas por artista, orden alfabético) |
-| `/nueva/` | Crear canción |
+| `/nueva/` | Crear canción (soporta GET params `?title=&artist=&genre=&spotify_url=` para pre‑llenar) |
+| `/buscar/` | Buscar canciones en iTunes Search API y añadirlas |
 | `/<pk>/editar/` | Editar canción |
 | `/<pk>/eliminar/` | Eliminar canción |
 | `/<pk>/calificar/` | Calificar canción (POST) |
@@ -80,8 +82,10 @@ Euphonic/
   - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL`
   - `USER2_USERNAME`, `USER2_PASSWORD`
 
-## Pendiente — Idea 2
-Implementar búsqueda desde iTunes Search API (sin auth) o Spotify API (con registro) para extraer datos de canciones automáticamente (artista, álbum, carátula) al escribir el nombre en un buscador.
+## iTunes Search API
+- Ruta: `/buscar/` → vista `search_songs_view`
+- `songs/itunes.py`: `search_songs(query)` devuelve lista con `track_name`, `artist_name`, `album`, `genre`, `artwork_url`, `track_view_url`, `preview_url`
+- Botón "Añadir" en cada resultado enlaza a `/nueva/?title=...&artist=...&genre=...&spotify_url=...` con pre‑llenado automático del formulario
 
 ## Usuarios
 - admin / contraseña elegida por el usuario
