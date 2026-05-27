@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="card">
+<div class="card" style="max-width:560px">
   <h2 style="margin-bottom:1rem">
     {% if object %}Editar «{{ object.title }}»{% else %}Nueva canción{% endif %}
   </h2>
@@ -11,11 +11,13 @@
       <label>{{ field.label }}</label>
       {{ field }}
       {% if field.errors %}
-        <div style="color:#f87171;font-size:0.85rem;margin-top:0.2rem">{{ field.errors.0 }}</div>
+        <div class="form-error">{{ field.errors.0 }}</div>
       {% endif %}
     {% endfor %}
-    <button type="submit" class="btn btn-primary">Guardar</button>
-    <a href="{% url 'song_list' %}" class="btn btn-outline">Cancelar</a>
+    <div style="display:flex;gap:.5rem;margin-top:1.2rem">
+      <button type="submit" class="btn btn-primary">Guardar</button>
+      <a href="{% url 'song_list' %}" class="btn btn-outline">Cancelar</a>
+    </div>
   </form>
 </div>
 

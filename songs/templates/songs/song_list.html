@@ -2,20 +2,8 @@
 {% load euphonic_extras %}
 {% block content %}
 
-<style>
-  .artist-header {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #a855f7;
-    padding: 0.5rem 0 0.3rem;
-    margin: 1.5rem 0 0.8rem;
-    border-bottom: 1px solid #2a2a4e;
-  }
-  .artist-header:first-of-type { margin-top: 0; }
-</style>
-
 <div class="search-form">
-  <form method="get" style="display:flex;gap:0.5rem;width:100%">
+  <form method="get" style="display:flex;gap:.5rem;width:100%">
     <input type="text" name="q" placeholder="Buscar por título o artista…" value="{{ request.GET.q }}">
     <button type="submit" class="btn btn-primary">Buscar</button>
     {% if request.GET.q %}
@@ -29,12 +17,12 @@
   {% for artist, songs in songs_by_artist %}
     <div class="artist-header">{{ artist }}</div>
     {% for song in songs %}
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:start">
+      <div class="card fade-in">
+        <div class="flex-between" style="align-items:start">
           <div>
             <h3>{{ song.title }}</h3>
             {% if song.genre %}<div class="meta">{{ song.genre }}</div>{% endif %}
-            <div class="meta" style="margin-top:0.3rem">
+            <div class="meta mt-2">
               Promedio:
               <span class="stars">
                 {% with avg=song.average_rating %}
@@ -48,7 +36,7 @@
               </span>
             </div>
           </div>
-          <div style="text-align:right;white-space:nowrap">
+          <div style="display:flex;gap:.35rem;flex-wrap:wrap">
             {% if song.spotify_url %}
               <a href="{{ song.spotify_url }}" target="_blank" class="btn btn-outline btn-sm">Spotify</a>
             {% endif %}
@@ -58,26 +46,25 @@
           </div>
         </div>
 
-        <div class="meta" style="margin-top:0.6rem">
+        <div class="meta mt-3">
           Tu calificación:
           <span class="stars" style="font-size:1.3rem">
             {% for i in "12345" %}
-              <form method="post" action="{% url 'rate_song' song.pk %}" style="display:inline;cursor:pointer">
+              <form method="post" action="{% url 'rate_song' song.pk %}" style="display:inline">
                 {% csrf_token %}
                 <input type="hidden" name="value" value="{{ forloop.counter }}">
-                <button type="submit" style="background:none;border:none;padding:0;cursor:pointer;color:{% if user_ratings|dictget:song.pk and forloop.counter <= user_ratings|dictget:song.pk %}#facc15{% else %}#555{% endif %};font-size:1.3rem"
-                        title="{{ forloop.counter }} estrella{{ forloop.counter|pluralize:'s' }}">
-                  ★
-                </button>
+                <button type="submit" class="btn-ghost"
+                        style="color:{% if user_ratings|dictget:song.pk and forloop.counter <= user_ratings|dictget:song.pk %}#facc15{% else %}#444{% endif %}"
+                        title="{{ forloop.counter }} estrella{{ forloop.counter|pluralize:'s' }}">★</button>
               </form>
             {% endfor %}
             {% if user_ratings|dictget:song.pk %}
-              <span style="font-size:0.8rem;color:#888">({{ user_ratings|dictget:song.pk }}/5)</span>
+              <span style="font-size:.8rem;color:var(--text2)">({{ user_ratings|dictget:song.pk }}/5)</span>
             {% endif %}
           </span>
         </div>
 
-        <div class="actions">
+        <div class="actions mt-3" style="display:flex;gap:.5rem">
           <a href="{% url 'song_update' song.pk %}" class="btn btn-primary btn-sm">Editar</a>
           <form method="post" action="{% url 'song_delete' song.pk %}" class="inline-form">
             {% csrf_token %}
@@ -94,7 +81,7 @@
         <a href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">«</a>
         <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">‹</a>
       {% endif %}
-      <span style="padding:0.3rem 0.7rem;color:#888">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      <span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
       {% if page_obj.has_next %}
         <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">›</a>
         <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">»</a>

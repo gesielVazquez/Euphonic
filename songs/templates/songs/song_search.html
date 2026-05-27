@@ -3,13 +3,14 @@
 
 <div class="card">
   <h2 style="margin-bottom:1rem">Buscar canciones en iTunes</h2>
-  <form method="get" class="search-form">
-    <input type="text" name="q" placeholder="Escribí título o artista…" value="{{ query }}" autofocus>
+  <form method="get" class="search-form" id="search-form">
+    <input type="text" name="q" placeholder="Escribí título o artista…" value="{{ query }}" autofocus id="search-input">
     <button type="submit" class="btn btn-primary">Buscar</button>
     {% if query %}
       <a href="{% url 'song_search' %}" class="btn btn-outline">Limpiar</a>
     {% endif %}
   </form>
+  <div id="spinner" class="spinner hidden"></div>
 </div>
 
 {% if query and page_obj.paginator.count == 0 %}
@@ -18,19 +19,19 @@
   </div>
 {% endif %}
 
+<div id="results">
 {% for r in page_obj %}
-  <div class="card">
+  <div class="card fade-in">
     <div style="display:flex;gap:1rem;align-items:start">
       {% if r.artwork_url %}
-        <img src="{{ r.artwork_url }}" alt="Portada"
-             style="width:80px;height:80px;border-radius:6px;flex-shrink:0">
+        <img src="{{ r.artwork_url }}" alt="Portada" class="cover">
       {% endif %}
-      <div style="flex:1">
-        <h3>{{ r.track_name }}</h3>
+      <div style="flex:1;min-width:0">
+        <h3 style="font-size:1rem">{{ r.track_name }}</h3>
         <div class="meta">{{ r.artist_name }}{% if r.album %} · {{ r.album }}{% endif %}</div>
-        {% if r.genre %}<div class="meta" style="margin-top:0.2rem">{{ r.genre }}</div>{% endif %}
+        {% if r.genre %}<div class="meta mt-2">{{ r.genre }}</div>{% endif %}
       </div>
-      <div style="display:flex;flex-direction:column;gap:0.5rem;flex-shrink:0">
+      <div style="display:flex;flex-direction:column;gap:.35rem;flex-shrink:0">
         <a href="{% url 'song_create' %}?title={{ r.track_name|urlencode }}&artist={{ r.artist_name|urlencode }}&genre={{ r.genre|urlencode }}&spotify_url={{ r.track_view_url|urlencode }}"
            class="btn btn-primary btn-sm">Añadir</a>
         {% if r.track_view_url %}
@@ -38,17 +39,20 @@
         {% endif %}
         {% if r.preview_url %}
           <button class="btn btn-outline btn-sm" style="cursor:pointer"
-                  onclick="document.getElementById('preview-{{ forloop.counter }}').play()">▶ Vista previa</button>
+                  onclick="document.getElementById('preview-{{ forloop.counter }}').play()">▶ Preview</button>
           <audio id="preview-{{ forloop.counter }}" src="{{ r.preview_url }}" preload="none"></audio>
         {% endif %}
       </div>
     </div>
   </div>
   {% empty %}
-    <div class="empty">
-      <p>Buscá canciones de iTunes para agregarlas rápidamente a Euphonic.</p>
-    </div>
+    {% if not query %}
+      <div class="empty">
+        <p>Buscá canciones de iTunes para agregarlas rápidamente a Euphonic.</p>
+      </div>
+    {% endif %}
 {% endfor %}
+</div>
 
 {% if page_obj.paginator.num_pages > 1 %}
   <div class="pagination">
@@ -56,12 +60,19 @@
       <a href="?q={{ query|urlencode }}&page=1">«</a>
       <a href="?q={{ query|urlencode }}&page={{ page_obj.previous_page_number }}">‹</a>
     {% endif %}
-    <span style="padding:0.3rem 0.7rem;color:#888">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    <span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
     {% if page_obj.has_next %}
       <a href="?q={{ query|urlencode }}&page={{ page_obj.next_page_number }}">›</a>
       <a href="?q={{ query|urlencode }}&page={{ page_obj.paginator.num_pages }}">»</a>
     {% endif %}
   </div>
 {% endif %}
+
+<script>
+  document.getElementById('search-form')?.addEventListener('submit', function() {
+    document.getElementById('spinner')?.classList.remove('hidden');
+    document.getElementById('results')?.classList.add('hidden');
+  });
+</script>
 
 {% endblock %}

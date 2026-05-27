@@ -2,17 +2,17 @@
 {% block content %}
 
 <div class="card" style="max-width:400px;margin:4rem auto">
-  <h2 style="margin-bottom:1rem">Iniciar sesión</h2>
+  <h2 style="margin-bottom:1.5rem;text-align:center">Iniciar sesión</h2>
   <form method="post">
     {% csrf_token %}
     <label>Usuario</label>
     <input type="text" name="username" required>
-    <label>Contraseña</label>
+    <label style="margin-top:1rem">Contraseña</label>
     <input type="password" name="password" required>
     {% if form.errors %}
-      <div style="color:#f87171;font-size:0.85rem;margin-top:0.5rem">Usuario o contraseña incorrectos.</div>
+      <div class="form-error" style="margin-top:.75rem">Usuario o contraseña incorrectos.</div>
     {% endif %}
-    <button type="submit" class="btn btn-primary">Entrar</button>
+    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:1.5rem">Entrar</button>
   </form>
 </div>
 

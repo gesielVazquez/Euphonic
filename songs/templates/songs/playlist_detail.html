@@ -2,12 +2,12 @@
 {% load euphonic_extras %}
 {% block content %}
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+<div class="flex-between mb-3">
   <div>
     <h2>Playlist #{{ playlist.pk }}</h2>
     <div class="meta">{{ playlist.created_at|date:"d/m/Y H:i" }} · generada por {{ playlist.created_by.username }}</div>
   </div>
-  <div style="display:flex;gap:0.5rem">
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <a href="{% url 'generate_playlist' %}" class="btn btn-primary">🎲 Generar otra</a>
     <a href="{% url 'export_playlist' playlist.pk %}" class="btn btn-outline">📄 Exportar</a>
     <a href="{% url 'delete_playlist' playlist.pk %}" class="btn btn-danger">🗑 Eliminar</a>
@@ -15,18 +15,16 @@
 </div>
 
 {% for entry in playlist.entries.all %}
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div>
-        <div style="display:flex;align-items:center;gap:0.8rem">
-          <span style="color:#a855f7;font-weight:700;font-size:1.1rem">{{ entry.order }}.</span>
-          <div>
-            <h3>{{ entry.song.title }}</h3>
-            <div class="meta">{{ entry.song.artist }}{% if entry.song.genre %} · {{ entry.song.genre }}{% endif %}</div>
-          </div>
+  <div class="card fade-in">
+    <div class="flex-between" style="align-items:center">
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <span style="color:var(--primary);font-weight:700;font-size:1.1rem">{{ entry.order }}.</span>
+        <div>
+          <h3>{{ entry.song.title }}</h3>
+          <div class="meta">{{ entry.song.artist }}{% if entry.song.genre %} · {{ entry.song.genre }}{% endif %}</div>
         </div>
       </div>
-      <div style="display:flex;gap:0.5rem">
+      <div style="display:flex;gap:.35rem">
         {% if entry.song.spotify_url %}
           <a href="{{ entry.song.spotify_url }}" target="_blank" class="btn btn-outline btn-sm">Spotify</a>
         {% endif %}
@@ -35,7 +33,7 @@
         {% endif %}
       </div>
     </div>
-    <div class="meta" style="margin-top:0.5rem">
+    <div class="meta mt-3">
       <span class="stars">
         {% with avg=entry.song.average_rating %}
           {% if avg %}
@@ -63,7 +61,7 @@
   </div>
 {% endfor %}
 
-<div style="text-align:center;margin-top:1rem">
+<div style="text-align:center;margin-top:1.5rem">
   <a href="{% url 'playlist_list' %}" class="btn btn-outline">← Todas las playlists</a>
 </div>
 
