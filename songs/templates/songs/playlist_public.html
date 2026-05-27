@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Playlist #{{ playlist.pk }} — Euphonic</title>
+  <style>
+    :root { --bg: #0a0a0f; --surface: #12121a; --border: #2a2a4a; --text: #e0e0e8; --text2: #8888aa; --primary: #a855f7; --gold: #facc15; --radius: 12px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    .container { max-width: 720px; margin: 0 auto; padding: 2rem 1rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+    .meta { font-size: .85rem; color: var(--text2); }
+    .stars { color: var(--gold); }
+    h2 { margin-bottom: .5rem; }
+    .header { text-align: center; margin-bottom: 2rem; }
+    .header a { color: var(--primary); text-decoration: none; }
+    .order { color: var(--primary); font-weight: 700; font-size: 1.1rem; }
+    .flex { display: flex; align-items: center; gap: .75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Playlist #{{ playlist.pk }}</h2>
+      <div class="meta">{{ playlist.created_at|date:"d/m/Y H:i" }} · generada por {{ playlist.created_by.username }}</div>
+    </div>
+
+    {% for entry in playlist.entries.all %}
+      <div class="card">
+        <div class="flex">
+          {% if entry.song.artwork_url %}
+            <img src="{{ entry.song.artwork_url }}" alt="" style="width:48px;height:48px;border-radius:6px;flex-shrink:0">
+          {% endif %}
+          <span class="order">{{ entry.order }}.</span>
+          <div>
+            <strong>{{ entry.song.title }}</strong>
+            <div class="meta">{{ entry.song.artist }}{% if entry.song.genre %} · {{ entry.song.genre }}{% endif %}</div>
+          </div>
+        </div>
+        {% with avg=entry.song.average_rating %}
+          {% if avg %}
+            <div class="meta" style="margin-top:.5rem">
+              <span class="stars">{% for i in "12345" %}{% if forloop.counter <= avg %}★{% else %}☆{% endif %}{% endfor %} ({{ avg|floatformat:1 }})</span>
+            </div>
+          {% endif %}
+        {% endwith %}
+      </div>
+    {% endfor %}
+
+    <div style="text-align:center;margin-top:1.5rem">
+      <a href="{% url 'song_list' %}" style="color:var(--primary);text-decoration:none">♫ Euphonic</a>
+    </div>
+  </div>
+</body>
+</html>

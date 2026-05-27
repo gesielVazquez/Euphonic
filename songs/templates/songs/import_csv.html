@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card" style="max-width:560px">
+  <h2 style="margin-bottom:1rem">Importar canciones desde CSV</h2>
+  <p style="color:var(--text2);font-size:.9rem;margin-bottom:1rem">
+    El CSV debe tener columnas: <code>title</code>, <code>artist</code>, <code>genre</code>, <code>spotify_url</code>, <code>tab_url</code> (solo title y artist son obligatorios).
+  </p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="csv_file" accept=".csv" required style="margin-top:.5rem">
+    <div style="display:flex;gap:.5rem;margin-top:1.2rem">
+      <button type="submit" class="btn btn-primary">Importar</button>
+      <a href="{% url 'song_list' %}" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

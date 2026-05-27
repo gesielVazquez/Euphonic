@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="flex-between mb-3">
+<div class="flex-between mb-3" style="flex-wrap:wrap;gap:.5rem">
   <h2>Playlists</h2>
-  <a href="{% url 'generate_playlist' %}" class="btn btn-primary">🎲 Generar nueva</a>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <a href="{% url 'generate_weekly_playlist' %}" class="btn btn-primary">📅 Semanal</a>
+    <a href="{% url 'generate_playlist' %}" class="btn btn-outline">🎲 Personalizada</a>
+  </div>
 </div>
 
 {% if playlists %}

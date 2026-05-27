@@ -19,6 +19,15 @@
       --radius: 12px;
       --shadow: 0 4px 20px rgba(0,0,0,.4);
     }
+    body.light {
+      --bg: #f5f5fa;
+      --surface: #ffffff;
+      --surface2: #eeeef5;
+      --border: #d0d0e0;
+      --text: #1a1a2e;
+      --text2: #666680;
+      --shadow: 0 4px 20px rgba(0,0,0,.08);
+    }
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
@@ -265,7 +274,9 @@
         <a href="{% url 'dashboard' %}">Estadísticas</a>
         <a href="{% url 'song_search' %}">Buscar</a>
         <a href="{% url 'playlist_list' %}">Playlists</a>
+        <a href="{% url 'import_csv' %}">Importar</a>
         <a href="{% url 'song_create' %}">+ Nueva</a>
+        <button id="theme-toggle" title="Cambiar tema">🌙</button>
         <form method="post" action="{% url 'logout' %}" style="display:inline">
           {% csrf_token %}
           <button type="submit">Cerrar sesión</button>
@@ -284,6 +295,20 @@
     {% block content %}{% endblock %}
   </div>
   <script>
+    // Theme toggle
+    (function() {
+      const btn = document.getElementById('theme-toggle');
+      const isLight = localStorage.getItem('theme') === 'light';
+      if (isLight) { document.body.classList.add('light'); btn.textContent = '☀️'; }
+      if (btn) {
+        btn.addEventListener('click', () => {
+          document.body.classList.toggle('light');
+          const nowLight = document.body.classList.contains('light');
+          localStorage.setItem('theme', nowLight ? 'light' : 'dark');
+          btn.textContent = nowLight ? '☀️' : '🌙';
+        });
+      }
+    })();
     // Auto-dismiss flash messages
     document.querySelectorAll('.flash').forEach(el => {
       setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 4000);

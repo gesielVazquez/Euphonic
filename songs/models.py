@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -76,11 +78,18 @@ class Playlist(models.Model):
         related_name="playlists_created",
         verbose_name="creada por",
     )
+    is_public = models.BooleanField(default=False, verbose_name="pública")
+    share_token = models.CharField(max_length=12, blank=True, unique=True, verbose_name="token compartir")
 
     class Meta:
         verbose_name = "playlist"
         verbose_name_plural = "playlists"
         ordering = ["-created_at"]
+
+    def save(self, *args, **kwargs):
+        if not self.share_token:
+            self.share_token = uuid.uuid4().hex[:12]
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Playlist #{self.pk} — {self.created_at.strftime('%d/%m/%Y %H:%M')}"

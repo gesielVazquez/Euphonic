@@ -20,7 +20,7 @@ class SongAdmin(admin.ModelAdmin):
 
 
 class PlaylistAdmin(admin.ModelAdmin):
-    list_display = ["__str__", "created_by", "song_count", "created_at"]
+    list_display = ["__str__", "created_by", "song_count", "is_public", "created_at"]
     inlines = [PlaylistSongInline]
 
     def song_count(self, obj):

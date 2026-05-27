@@ -10,8 +10,27 @@
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <a href="{% url 'generate_playlist' %}" class="btn btn-primary">🎲 Generar otra</a>
     <a href="{% url 'export_playlist' playlist.pk %}" class="btn btn-outline">📄 Exportar</a>
+    <a href="{% url 'toggle_playlist_visibility' playlist.pk %}" class="btn btn-outline">
+      {{ playlist.is_public|yesno:"🔒 Hacer privada,🔗 Hacer pública" }}
+    </a>
     <a href="{% url 'delete_playlist' playlist.pk %}" class="btn btn-danger">🗑 Eliminar</a>
   </div>
+</div>
+
+{% if playlist.is_public %}
+  <div class="card" style="padding:.75rem 1rem;margin-bottom:1.5rem">
+    <div class="meta" style="font-size:.85rem">
+      🔗 Link público:
+      <a href="{% url 'public_playlist' playlist.share_token %}" target="_blank" style="color:var(--primary);word-break:break-all">
+        {{ request.scheme }}://{{ request.get_host }}{% url 'public_playlist' playlist.share_token %}
+      </a>
+      <button class="btn btn-outline btn-sm" style="margin-left:.5rem;padding:.2rem .5rem;font-size:.75rem"
+              onclick="navigator.clipboard.writeText(this.previousElementSibling.href);this.textContent='Copiado!'">
+        Copiar
+      </button>
+    </div>
+  </div>
+{% endif %}
 </div>
 
 {% for entry in playlist.entries.all %}
