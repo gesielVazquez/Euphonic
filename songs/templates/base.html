@@ -91,6 +91,7 @@
     <div class="links">
       {% if user.is_authenticated %}
         <span style="color:#888;font-size:0.85rem">{{ user.username }}</span>
+        <a href="{% url 'dashboard' %}">Estadísticas</a>
         <a href="{% url 'song_search' %}">Buscar</a>
         <a href="{% url 'playlist_list' %}">Playlists</a>
         <a href="{% url 'song_create' %}">+ Nueva canción</a>

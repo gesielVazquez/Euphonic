@@ -52,14 +52,17 @@ Euphonic/
 | Ruta | Vista |
 |------|-------|
 | `/` | Lista de canciones (agrupadas por artista, orden alfabético) |
-| `/nueva/` | Crear canción (soporta GET params `?title=&artist=&genre=&spotify_url=` para pre‑llenar) |
+| `/nueva/` | Crear canción (soporta GET params `?title=&artist=&genre=&spotify_url=` para pre‑llenar; valida duplicados) |
 | `/buscar/` | Buscar canciones en iTunes Search API y añadirlas |
+| `/dashboard/` | Estadísticas: canciones, calificaciones, playlists, top |
 | `/<pk>/editar/` | Editar canción |
 | `/<pk>/eliminar/` | Eliminar canción |
 | `/<pk>/calificar/` | Calificar canción (POST) |
-| `/playlists/` | Lista de playlists |
+| `/playlists/` | Lista de playlists (compartidas entre usuarios) |
 | `/playlists/generar/` | Generar playlist |
 | `/playlists/<pk>/` | Detalle de playlist |
+| `/playlists/<pk>/exportar/` | Exportar playlist como texto |
+| `/playlists/<pk>/eliminar/` | Eliminar playlist (POST con confirmación) |
 | `/accounts/login/` | Login |
 | `/accounts/logout/` | Logout (POST) |
 | `/admin/` | Django Admin |

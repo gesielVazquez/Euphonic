@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card" style="max-width:500px;margin:4rem auto;text-align:center">
+  <h2 style="margin-bottom:1rem">¿Eliminar playlist?</h2>
+  <p style="margin-bottom:1.5rem;color:#aaa">
+    Playlist #{{ playlist.pk }} · {{ playlist.entries.count }} canciones · {{ playlist.created_at|date:"d/m/Y H:i" }}
+  </p>
+  <form method="post" style="display:flex;gap:0.5rem;justify-content:center">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+    <a href="{% url 'playlist_detail' playlist.pk %}" class="btn btn-outline">Cancelar</a>
+  </form>
+</div>
+
+{% endblock %}

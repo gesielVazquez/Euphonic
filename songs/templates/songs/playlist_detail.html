@@ -7,7 +7,11 @@
     <h2>Playlist #{{ playlist.pk }}</h2>
     <div class="meta">{{ playlist.created_at|date:"d/m/Y H:i" }} · generada por {{ playlist.created_by.username }}</div>
   </div>
-  <a href="{% url 'generate_playlist' %}" class="btn btn-primary">🎲 Generar otra</a>
+  <div style="display:flex;gap:0.5rem">
+    <a href="{% url 'generate_playlist' %}" class="btn btn-primary">🎲 Generar otra</a>
+    <a href="{% url 'export_playlist' playlist.pk %}" class="btn btn-outline">📄 Exportar</a>
+    <a href="{% url 'delete_playlist' playlist.pk %}" class="btn btn-danger">🗑 Eliminar</a>
+  </div>
 </div>
 
 {% for entry in playlist.entries.all %}

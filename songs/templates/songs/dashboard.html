@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 style="margin-bottom:1.5rem">📊 Estadísticas</h2>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem">
+  <div class="card" style="text-align:center">
+    <div style="font-size:2rem;font-weight:700;color:#a855f7">{{ total_songs }}</div>
+    <div class="meta">Canciones</div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div style="font-size:2rem;font-weight:700;color:#a855f7">{{ total_ratings }}</div>
+    <div class="meta">Calificaciones</div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div style="font-size:2rem;font-weight:700;color:#a855f7">{{ total_playlists }}</div>
+    <div class="meta">Playlists generadas</div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div style="font-size:2rem;font-weight:700;color:#a855f7">{{ avg_all|default:"—" }}</div>
+    <div class="meta">Promedio general</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+  <div class="card">
+    <h3>Mejor calificadas</h3>
+    {% if top_rated %}
+      <ol style="margin-top:0.8rem;padding-left:1.2rem">
+        {% for s in top_rated %}
+          <li style="margin-bottom:0.5rem">
+            <strong>{{ s.title }}</strong>
+            <span class="meta"> — {{ s.artist }}</span>
+            <span class="stars"> ({{ s.avg_r|floatformat:1 }}★)</span>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <div class="meta" style="margin-top:0.8rem">Sin calificaciones aún.</div>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h3>Más calificadas</h3>
+    {% if most_rated %}
+      <ol style="margin-top:0.8rem;padding-left:1.2rem">
+        {% for s in most_rated %}
+          <li style="margin-bottom:0.5rem">
+            <strong>{{ s.title }}</strong>
+            <span class="meta"> — {{ s.artist }}</span>
+            <span class="meta"> ({{ s.rc }} calificación{{ s.rc|pluralize:"es" }})</span>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <div class="meta" style="margin-top:0.8rem">Sin calificaciones aún.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

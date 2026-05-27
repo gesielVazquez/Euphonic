@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Count, Avg
 
 from .models import Song, Rating, Playlist, PlaylistSong
 from .itunes import search_songs as itunes_search
@@ -50,6 +50,11 @@ class SongCreateView(LoginRequiredMixin, CreateView):
         return initial
 
     def form_valid(self, form):
+        title = form.cleaned_data["title"]
+        artist = form.cleaned_data["artist"]
+        if Song.objects.filter(title__iexact=title, artist__iexact=artist).exists():
+            form.add_error("title", f"Ya existe «{title}» de {artist}.")
+            return self.form_invalid(form)
         form.instance.created_by = self.request.user
         return super().form_valid(form)
 
@@ -165,3 +170,54 @@ def generate_playlist(request):
 
     messages.success(request, f"Playlist generada con {len(selected)} canciones.")
     return redirect("playlist_detail", pk=playlist.pk)
+
+
+@login_required
+def dashboard_view(request):
+    total_songs = Song.objects.count()
+    total_ratings = Rating.objects.count()
+    total_playlists = Playlist.objects.count()
+    avg_all = Rating.objects.aggregate(avg=Avg("value"))["avg"]
+    top_rated = (
+        Song.objects.annotate(avg_r=Avg("ratings__value"))
+        .filter(avg_r__isnull=False)
+        .order_by("-avg_r")[:5]
+    )
+    most_rated = (
+        Song.objects.annotate(rc=Count("ratings"))
+        .filter(rc__gt=0)
+        .order_by("-rc")[:5]
+    )
+    return render(request, "songs/dashboard.html", {
+        "total_songs": total_songs,
+        "total_ratings": total_ratings,
+        "total_playlists": total_playlists,
+        "avg_all": round(avg_all, 2) if avg_all else None,
+        "top_rated": top_rated,
+        "most_rated": most_rated,
+    })
+
+
+@login_required
+def export_playlist_view(request, pk):
+    playlist = get_object_or_404(Playlist, pk=pk)
+    lines = [f"Playlist #{playlist.pk} — {playlist.created_at.strftime('%d/%m/%Y %H:%M')}",
+             f"Generada por: {playlist.created_by.username}",
+             "=" * 40]
+    for entry in playlist.entries.all():
+        avg = entry.song.average_rating()
+        rating_str = f"{avg:.1f}★" if avg else "—"
+        lines.append(f"{entry.order}. {entry.song.title} — {entry.song.artist} [{rating_str}]")
+    lines.append(f"\n{playlist.entries.count()} canciones en total.")
+    return render(request, "songs/playlist_export.txt", {"content": "\n".join(lines)},
+                  content_type="text/plain; charset=utf-8")
+
+
+@login_required
+def delete_playlist_view(request, pk):
+    playlist = get_object_or_404(Playlist, pk=pk)
+    if request.method == "POST":
+        playlist.delete()
+        messages.success(request, "Playlist eliminada.")
+        return redirect("playlist_list")
+    return render(request, "songs/playlist_confirm_delete.html", {"playlist": playlist})
