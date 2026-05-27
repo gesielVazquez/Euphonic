@@ -183,10 +183,10 @@ def dashboard_view(request):
         .filter(avg_r__isnull=False)
         .order_by("-avg_r")[:5]
     )
-    most_rated = (
-        Song.objects.annotate(rc=Count("ratings"))
-        .filter(rc__gt=0)
-        .order_by("-rc")[:5]
+    worst_rated = (
+        Song.objects.annotate(avg_r=Avg("ratings__value"))
+        .filter(avg_r__isnull=False)
+        .order_by("avg_r")[:5]
     )
     return render(request, "songs/dashboard.html", {
         "total_songs": total_songs,
@@ -194,7 +194,7 @@ def dashboard_view(request):
         "total_playlists": total_playlists,
         "avg_all": round(avg_all, 2) if avg_all else None,
         "top_rated": top_rated,
-        "most_rated": most_rated,
+        "worst_rated": worst_rated,
     })
 
 

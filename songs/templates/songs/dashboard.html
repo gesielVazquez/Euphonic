@@ -40,14 +40,14 @@
     {% endif %}
   </div>
   <div class="card">
-    <h3>Más calificadas</h3>
-    {% if most_rated %}
+    <h3>Peor calificadas</h3>
+    {% if worst_rated %}
       <ol style="margin-top:0.8rem;padding-left:1.2rem">
-        {% for s in most_rated %}
+        {% for s in worst_rated %}
           <li style="margin-bottom:0.5rem">
             <strong>{{ s.title }}</strong>
             <span class="meta"> — {{ s.artist }}</span>
-            <span class="meta"> ({{ s.rc }} calificación{{ s.rc|pluralize:"es" }})</span>
+            <span class="stars"> ({{ s.avg_r|floatformat:1 }}★)</span>
           </li>
         {% endfor %}
       </ol>
