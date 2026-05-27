@@ -21,13 +21,16 @@ def search_songs(query, limit=15):
 
     results = []
     for item in data.get("results", []):
+        genre = item.get("primaryGenreName") or ""
+        if not genre and item.get("genres"):
+            genre = item["genres"][0] if isinstance(item["genres"], list) else ""
         results.append({
-            "track_name": item.get("trackName"),
-            "artist_name": item.get("artistName"),
-            "album": item.get("collectionName"),
-            "genre": item.get("primaryGenreName"),
+            "track_name": item.get("trackName") or "",
+            "artist_name": item.get("artistName") or "",
+            "album": item.get("collectionName") or "",
+            "genre": genre,
             "artwork_url": (item.get("artworkUrl100") or "").replace("100x100", "200x200"),
-            "track_view_url": item.get("trackViewUrl"),
-            "preview_url": item.get("previewUrl"),
+            "track_view_url": item.get("trackViewUrl") or "",
+            "preview_url": item.get("previewUrl") or "",
         })
     return results

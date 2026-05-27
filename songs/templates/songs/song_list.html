@@ -18,8 +18,11 @@
     <div class="artist-header">{{ artist }}</div>
     {% for song in songs %}
       <div class="card fade-in">
-        <div class="flex-between" style="align-items:start">
-          <div>
+        <div style="display:flex;gap:1rem;align-items:start">
+          {% if song.artwork_url %}
+            <img src="{{ song.artwork_url }}" alt="" class="cover">
+          {% endif %}
+          <div style="flex:1;min-width:0">
             <h3>{{ song.title }}</h3>
             {% if song.genre %}<div class="meta">{{ song.genre }}</div>{% endif %}
             <div class="meta mt-2">

@@ -38,7 +38,7 @@ class SongListView(LoginRequiredMixin, ListView):
 
 class SongCreateView(LoginRequiredMixin, CreateView):
     model = Song
-    fields = ["title", "artist", "genre", "spotify_url", "tab_url"]
+    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url"]
     success_url = reverse_lazy("song_list")
 
     def get_initial(self):
@@ -61,7 +61,7 @@ class SongCreateView(LoginRequiredMixin, CreateView):
 
 class SongUpdateView(LoginRequiredMixin, UpdateView):
     model = Song
-    fields = ["title", "artist", "genre", "spotify_url", "tab_url"]
+    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url"]
     success_url = reverse_lazy("song_list")
 
 

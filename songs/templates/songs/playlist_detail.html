@@ -19,6 +19,9 @@
     <div class="flex-between" style="align-items:center">
       <div style="display:flex;align-items:center;gap:.75rem">
         <span style="color:var(--primary);font-weight:700;font-size:1.1rem">{{ entry.order }}.</span>
+        {% if entry.song.artwork_url %}
+          <img src="{{ entry.song.artwork_url }}" alt="" class="cover" style="width:48px;height:48px">
+        {% endif %}
         <div>
           <h3>{{ entry.song.title }}</h3>
           <div class="meta">{{ entry.song.artist }}{% if entry.song.genre %} · {{ entry.song.genre }}{% endif %}</div>

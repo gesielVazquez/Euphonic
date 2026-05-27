@@ -13,7 +13,7 @@ class PlaylistSongInline(admin.TabularInline):
 
 
 class SongAdmin(admin.ModelAdmin):
-    list_display = ["title", "artist", "genre", "average_rating", "created_by", "last_played_at"]
+    list_display = ["title", "artist", "genre", "average_rating", "created_by", "last_played_at", "artwork_url"]
     list_filter = ["genre", "created_by"]
     search_fields = ["title", "artist"]
     inlines = [RatingInline]

@@ -10,6 +10,7 @@ class Song(models.Model):
 
     spotify_url = models.URLField(blank=True, verbose_name="enlace Spotify")
     tab_url = models.URLField(blank=True, verbose_name="enlace tablatura")
+    artwork_url = models.URLField(blank=True, verbose_name="portada")
 
     last_played_at = models.DateTimeField(
         null=True, blank=True,

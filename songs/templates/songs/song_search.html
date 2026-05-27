@@ -32,7 +32,7 @@
         {% if r.genre %}<div class="meta mt-2">{{ r.genre }}</div>{% endif %}
       </div>
       <div style="display:flex;flex-direction:column;gap:.35rem;flex-shrink:0">
-        <a href="{% url 'song_create' %}?title={{ r.track_name|urlencode }}&artist={{ r.artist_name|urlencode }}&genre={{ r.genre|urlencode }}&spotify_url={{ r.track_view_url|urlencode }}"
+        <a href="{% url 'song_create' %}?title={{ r.track_name|urlencode }}&artist={{ r.artist_name|urlencode }}&genre={{ r.genre|urlencode }}&spotify_url={{ r.track_view_url|urlencode }}&artwork_url={{ r.artwork_url|urlencode }}"
            class="btn btn-primary btn-sm">Añadir</a>
         {% if r.track_view_url %}
           <a href="{{ r.track_view_url }}" target="_blank" class="btn btn-outline btn-sm">iTunes</a>
