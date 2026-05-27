@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="flex-between mb-3">
+<div class="flex-between mb-3" style="flex-wrap:wrap;gap:.5rem">
   <h2>📊 Estadísticas</h2>
-  <a href="{% url 'export_songs' %}" class="btn btn-outline">📄 Exportar canciones</a>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <a href="{% url 'export_songs' %}" class="btn btn-outline">📄 Exportar canciones</a>
+    <a href="{% url 'backfill_artwork' %}" class="btn btn-outline" onclick="return confirm('¿Buscar carátulas faltantes en iTunes?')">🖼 Recuperar carátulas</a>
+  </div>
 </div>
 
 <div class="grid-stats">

@@ -226,6 +226,34 @@ def export_songs_view(request):
 
 
 @login_required
+def backfill_artwork_view(request):
+    songs = Song.objects.filter(artwork_url="")
+    total = songs.count()
+    if total == 0:
+        messages.info(request, "Todas las canciones ya tienen carátula.")
+        return redirect("dashboard")
+
+    updated = 0
+    errors = 0
+    for song in songs:
+        results = itunes_search(f"{song.title} {song.artist}", limit=3)
+        artwork = ""
+        for r in results:
+            if r["artwork_url"]:
+                artwork = r["artwork_url"]
+                break
+        if artwork:
+            song.artwork_url = artwork
+            song.save(update_fields=["artwork_url"])
+            updated += 1
+        else:
+            errors += 1
+
+    messages.success(request, f"Carátulas actualizadas: {updated}. Sin resultados: {errors}.")
+    return redirect("dashboard")
+
+
+@login_required
 def delete_playlist_view(request, pk):
     playlist = get_object_or_404(Playlist, pk=pk)
     if request.method == "POST":
