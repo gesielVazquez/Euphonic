@@ -67,20 +67,29 @@ class ItunesTest(TestCase):
 
     @patch("songs.deezer.urllib.request.urlopen")
     def test_deezer_search_songs_parses_response(self, mock_urlopen):
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({
+        search_data = json.dumps({
             "data": [
                 {
                     "id": 116348452,
                     "title": "Come Together (Remastered 2009)",
                     "artist": {"name": "The Beatles"},
-                    "album": {"title": "Abbey Road (Remastered)", "cover_medium": "https://example.com/cover.jpg"},
+                    "album": {"id": 12047952, "title": "Abbey Road (Remastered)", "cover_medium": "https://example.com/cover.jpg"},
                     "link": "https://deezer.com/track/1",
                     "preview": "https://example.com/preview.mp3",
                 },
             ],
-        }).encode()
-        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        })
+        album_data = json.dumps({
+            "genres": {"data": [{"id": 152, "name": "Rock"}]},
+        })
+
+        def side_effect(url, *args, **kwargs):
+            mock = MagicMock()
+            mock.__enter__.return_value = mock
+            mock.read.return_value = album_data.encode() if "album" in str(url) else search_data.encode()
+            return mock
+
+        mock_urlopen.side_effect = side_effect
 
         results = deezer_search("come together")
         self.assertEqual(len(results), 1)
@@ -88,6 +97,7 @@ class ItunesTest(TestCase):
         self.assertEqual(r["track_name"], "Come Together (Remastered 2009)")
         self.assertEqual(r["artist_name"], "The Beatles")
         self.assertEqual(r["album"], "Abbey Road (Remastered)")
+        self.assertEqual(r["genre"], "Rock")
         self.assertEqual(r["artwork_url"], "https://example.com/cover.jpg")
         self.assertEqual(r["track_view_url"], "https://deezer.com/track/1")
         self.assertEqual(r["preview_url"], "https://example.com/preview.mp3")
