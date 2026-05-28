@@ -7,7 +7,9 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from .models import Song, Rating, Playlist, PlaylistSong
-from .itunes import search_songs
+from .itunes import search_songs as itunes_search
+from .deezer import search_songs as deezer_search
+from .providers import search_songs as provider_search
 from .views import _song_weight, _weighted_sample
 
 
@@ -40,7 +42,7 @@ class ItunesTest(TestCase):
         }).encode()
         mock_urlopen.return_value.__enter__.return_value = mock_resp
 
-        results = search_songs("metallica")
+        results = itunes_search("metallica")
         self.assertEqual(len(results), 2)
 
         r = results[0]
@@ -51,6 +53,7 @@ class ItunesTest(TestCase):
         self.assertEqual(r["artwork_url"], "https://example.com/200x200.jpg")
         self.assertEqual(r["track_view_url"], "https://example.com/track")
         self.assertEqual(r["preview_url"], "https://example.com/preview.m4a")
+        self.assertEqual(r["provider"], "iTunes")
 
         r2 = results[1]
         self.assertEqual(r2["track_name"], "Master of Puppets")
@@ -59,15 +62,72 @@ class ItunesTest(TestCase):
     @patch("songs.itunes.urllib.request.urlopen")
     def test_search_songs_network_error_returns_empty(self, mock_urlopen):
         mock_urlopen.side_effect = Exception("timeout")
-        results = search_songs("anything")
+        results = itunes_search("anything")
         self.assertEqual(results, [])
+
+    @patch("songs.deezer.urllib.request.urlopen")
+    def test_deezer_search_songs_parses_response(self, mock_urlopen):
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({
+            "data": [
+                {
+                    "id": 116348452,
+                    "title": "Come Together (Remastered 2009)",
+                    "artist": {"name": "The Beatles"},
+                    "album": {"title": "Abbey Road (Remastered)", "cover_medium": "https://example.com/cover.jpg"},
+                    "link": "https://deezer.com/track/1",
+                    "preview": "https://example.com/preview.mp3",
+                },
+            ],
+        }).encode()
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+
+        results = deezer_search("come together")
+        self.assertEqual(len(results), 1)
+        r = results[0]
+        self.assertEqual(r["track_name"], "Come Together (Remastered 2009)")
+        self.assertEqual(r["artist_name"], "The Beatles")
+        self.assertEqual(r["album"], "Abbey Road (Remastered)")
+        self.assertEqual(r["artwork_url"], "https://example.com/cover.jpg")
+        self.assertEqual(r["track_view_url"], "https://deezer.com/track/1")
+        self.assertEqual(r["preview_url"], "https://example.com/preview.mp3")
+        self.assertEqual(r["provider"], "Deezer")
+
+    @patch("songs.deezer.urllib.request.urlopen")
+    def test_deezer_search_network_error_returns_empty(self, mock_urlopen):
+        mock_urlopen.side_effect = Exception("timeout")
+        results = deezer_search("anything")
+        self.assertEqual(results, [])
+
+    @patch("songs.deezer.urllib.request.urlopen")
+    def test_provider_fallback_to_itunes(self, mock_deezer):
+        mock_deezer.side_effect = Exception("Deezer down")
+        with patch("songs.itunes.urllib.request.urlopen") as mock_itunes:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = json.dumps({
+                "resultCount": 1,
+                "results": [{
+                    "trackName": "Enter Sandman",
+                    "artistName": "Metallica",
+                    "collectionName": "Metallica",
+                    "primaryGenreName": "Metal",
+                    "artworkUrl100": "https://example.com/100x100.jpg",
+                    "trackViewUrl": "",
+                    "previewUrl": "",
+                }],
+            }).encode()
+            mock_itunes.return_value.__enter__.return_value = mock_resp
+
+            results = provider_search("metallica")
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0]["provider"], "iTunes")
 
     @patch("songs.itunes.urllib.request.urlopen")
     def test_search_songs_empty_results(self, mock_urlopen):
         mock_resp = MagicMock()
         mock_resp.read.return_value = json.dumps({"resultCount": 0, "results": []}).encode()
         mock_urlopen.return_value.__enter__.return_value = mock_resp
-        results = search_songs("xyznonexistent")
+        results = itunes_search("xyznonexistent")
         self.assertEqual(results, [])
 
 
@@ -77,11 +137,12 @@ class SearchSongsViewTest(TestCase):
         self.client = Client()
         self.client.login(username="testuser", password="pass123")
 
-    @patch("songs.views.itunes_search")
-    def test_search_view_with_query(self, mock_itunes):
-        mock_itunes.return_value = [
+    @patch("songs.views.provider_search")
+    def test_search_view_with_query(self, mock_search):
+        mock_search.return_value = [
             {"track_name": f"Song {i}", "artist_name": "Artist", "album": "Album",
-             "genre": "Rock", "artwork_url": "", "track_view_url": "", "preview_url": ""}
+             "genre": "Rock", "artwork_url": "", "track_view_url": "", "preview_url": "",
+             "provider": "Deezer"}
             for i in range(15)
         ]
         resp = self.client.get(reverse("song_search"), {"q": "test"})
@@ -91,11 +152,12 @@ class SearchSongsViewTest(TestCase):
         self.assertEqual(resp.context["query"], "test")
         self.assertEqual(len(resp.context["page_obj"]), 10)
 
-    @patch("songs.views.itunes_search")
-    def test_search_view_pagination(self, mock_itunes):
-        mock_itunes.return_value = [
+    @patch("songs.views.provider_search")
+    def test_search_view_pagination(self, mock_search):
+        mock_search.return_value = [
             {"track_name": f"Song {i}", "artist_name": "Artist", "album": "Album",
-             "genre": "Rock", "artwork_url": "", "track_view_url": "", "preview_url": ""}
+             "genre": "Rock", "artwork_url": "", "track_view_url": "", "preview_url": "",
+             "provider": "Deezer"}
             for i in range(25)
         ]
         resp = self.client.get(reverse("song_search"), {"q": "test", "page": 2})
@@ -104,8 +166,8 @@ class SearchSongsViewTest(TestCase):
         self.assertEqual(resp.context["page_obj"].number, 2)
         self.assertEqual(resp.context["page_obj"].paginator.num_pages, 3)
 
-    @patch("songs.views.itunes_search")
-    def test_search_view_no_query_shows_empty(self, mock_itunes):
+    @patch("songs.views.provider_search")
+    def test_search_view_no_query_shows_empty(self, mock_search):
         resp = self.client.get(reverse("song_search"))
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.context["query"], "")

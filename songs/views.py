@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.db.models import Q, Count, Avg
 
 from .models import Song, Rating, Playlist, PlaylistSong
-from .itunes import search_songs as itunes_search
+from .providers import search_songs as provider_search
 
 
 class SongListView(LoginRequiredMixin, ListView):
@@ -89,7 +89,7 @@ def search_songs_view(request):
     results = []
     query = request.GET.get("q", "")
     if query:
-        results = itunes_search(query)
+        results = provider_search(query)
     paginator = Paginator(results, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -236,7 +236,7 @@ def backfill_artwork_view(request):
     updated = 0
     errors = 0
     for song in songs:
-        results = itunes_search(f"{song.title} {song.artist}", limit=3)
+        results = provider_search(f"{song.title} {song.artist}", limit=3)
         artwork = ""
         for r in results:
             if r["artwork_url"]:

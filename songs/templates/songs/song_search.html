@@ -2,7 +2,7 @@
 {% block content %}
 
 <div class="card">
-  <h2 style="margin-bottom:1rem">Buscar canciones en iTunes</h2>
+  <h2 style="margin-bottom:1rem">Buscar canciones</h2>
   <form method="get" class="search-form" id="search-form">
     <input type="text" name="q" placeholder="Escribí título o artista…" value="{{ query }}" autofocus id="search-input">
     <button type="submit" class="btn btn-primary">Buscar</button>
@@ -35,7 +35,7 @@
         <a href="{% url 'song_create' %}?title={{ r.track_name|urlencode }}&artist={{ r.artist_name|urlencode }}&genre={{ r.genre|urlencode }}&spotify_url={{ r.track_view_url|urlencode }}&artwork_url={{ r.artwork_url|urlencode }}"
            class="btn btn-primary btn-sm">Añadir</a>
         {% if r.track_view_url %}
-          <a href="{{ r.track_view_url }}" target="_blank" class="btn btn-outline btn-sm">iTunes</a>
+          <a href="{{ r.track_view_url }}" target="_blank" class="btn btn-outline btn-sm">{{ r.provider|default:"iTunes" }}</a>
         {% endif %}
         {% if r.preview_url %}
           <button class="btn btn-outline btn-sm" style="cursor:pointer"

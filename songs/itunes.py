@@ -32,5 +32,6 @@ def search_songs(query, limit=15):
             "artwork_url": (item.get("artworkUrl100") or "").replace("100x100", "200x200"),
             "track_view_url": item.get("trackViewUrl") or "",
             "preview_url": item.get("previewUrl") or "",
+            "provider": "iTunes",
         })
     return results
