@@ -38,7 +38,7 @@ class SongListView(LoginRequiredMixin, ListView):
 
 class SongCreateView(LoginRequiredMixin, CreateView):
     model = Song
-    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url"]
+    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url", "preview_url"]
     success_url = reverse_lazy("song_list")
 
     def get_initial(self):
@@ -61,7 +61,7 @@ class SongCreateView(LoginRequiredMixin, CreateView):
 
 class SongUpdateView(LoginRequiredMixin, UpdateView):
     model = Song
-    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url"]
+    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url", "preview_url"]
     success_url = reverse_lazy("song_list")
 
 
@@ -250,6 +250,32 @@ def backfill_artwork_view(request):
             errors += 1
 
     messages.success(request, f"Carátulas actualizadas: {updated}. Sin resultados: {errors}.")
+    return redirect("dashboard")
+
+
+@login_required
+def backfill_preview_view(request):
+    songs = Song.objects.filter(Q(preview_url="") | Q(preview_url__isnull=True))
+    total = songs.count()
+    if total == 0:
+        messages.info(request, "Todas las canciones ya tienen preview.")
+        return redirect("dashboard")
+    updated = 0
+    errors = 0
+    for song in songs:
+        results = provider_search(f"{song.title} {song.artist}", limit=3)
+        preview = ""
+        for r in results:
+            if r.get("preview_url"):
+                preview = r["preview_url"]
+                break
+        if preview:
+            song.preview_url = preview
+            song.save(update_fields=["preview_url"])
+            updated += 1
+        else:
+            errors += 1
+    messages.success(request, f"Previews actualizados: {updated}. Sin resultados: {errors}.")
     return redirect("dashboard")
 
 

@@ -41,8 +41,7 @@
           </div>
           <div style="display:flex;gap:.35rem;flex-wrap:wrap">
             {% if song.preview_url %}
-              <button class="btn btn-outline btn-sm" style="cursor:pointer"
-                      onclick="document.getElementById('preview-{{ song.pk }}').play()">▶ Preview</button>
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('preview-{{ song.pk }}').play()">▶ Preview</button>
               <audio id="preview-{{ song.pk }}" src="{{ song.preview_url }}" preload="none"></audio>
             {% endif %}
             {% if song.spotify_url %}
