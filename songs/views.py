@@ -254,6 +254,34 @@ def backfill_artwork_view(request):
 
 
 @login_required
+def backfill_preview_view(request):
+    songs = Song.objects.filter(preview_url="")
+    total = songs.count()
+    if total == 0:
+        messages.info(request, "Todas las canciones ya tienen preview.")
+        return redirect("dashboard")
+
+    updated = 0
+    errors = 0
+    for song in songs:
+        results = provider_search(f"{song.title} {song.artist}", limit=3)
+        preview = ""
+        for r in results:
+            if r["preview_url"]:
+                preview = r["preview_url"]
+                break
+        if preview:
+            song.preview_url = preview
+            song.save(update_fields=["preview_url"])
+            updated += 1
+        else:
+            errors += 1
+
+    messages.success(request, f"Previews actualizados: {updated}. Sin resultados: {errors}.")
+    return redirect("dashboard")
+
+
+@login_required
 def delete_playlist_view(request, pk):
     playlist = get_object_or_404(Playlist, pk=pk)
     if request.method == "POST":
