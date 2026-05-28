@@ -227,7 +227,7 @@ def export_songs_view(request):
 
 @login_required
 def backfill_artwork_view(request):
-    songs = Song.objects.filter(artwork_url="")
+    songs = Song.objects.filter(Q(artwork_url="") | Q(artwork_url__isnull=True))
     total = songs.count()
     if total == 0:
         messages.info(request, "Todas las canciones ya tienen carátula.")
