@@ -5,8 +5,7 @@
   <h2>📊 Estadísticas</h2>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <a href="{% url 'export_songs' %}" class="btn btn-outline">📄 Exportar canciones</a>
-    <a href="{% url 'backfill_artwork' %}" class="btn btn-outline" onclick="return confirm('¿Buscar carátulas faltantes?')">🖼 Recuperar carátulas</a>
-    <a href="{% url 'backfill_preview' %}" class="btn btn-outline" onclick="return confirm('¿Buscar previews de audio faltantes?')">🎵 Recuperar previews</a>
+    <a href="{% url 'backfill_artwork' %}" class="btn btn-outline" onclick="return confirm('¿Buscar carátulas faltantes en iTunes?')">🖼 Recuperar carátulas</a>
   </div>
 </div>
 

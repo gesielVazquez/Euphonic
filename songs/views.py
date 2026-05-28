@@ -38,7 +38,7 @@ class SongListView(LoginRequiredMixin, ListView):
 
 class SongCreateView(LoginRequiredMixin, CreateView):
     model = Song
-    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url", "preview_url"]
+    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url"]
     success_url = reverse_lazy("song_list")
 
     def get_initial(self):
@@ -61,7 +61,7 @@ class SongCreateView(LoginRequiredMixin, CreateView):
 
 class SongUpdateView(LoginRequiredMixin, UpdateView):
     model = Song
-    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url", "preview_url"]
+    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url"]
     success_url = reverse_lazy("song_list")
 
 
@@ -254,34 +254,6 @@ def backfill_artwork_view(request):
 
 
 @login_required
-def backfill_preview_view(request):
-    songs = Song.objects.filter(preview_url="")
-    total = songs.count()
-    if total == 0:
-        messages.info(request, "Todas las canciones ya tienen preview.")
-        return redirect("dashboard")
-
-    updated = 0
-    errors = 0
-    for song in songs:
-        results = provider_search(f"{song.title} {song.artist}", limit=3)
-        preview = ""
-        for r in results:
-            if r["preview_url"]:
-                preview = r["preview_url"]
-                break
-        if preview:
-            song.preview_url = preview
-            song.save(update_fields=["preview_url"])
-            updated += 1
-        else:
-            errors += 1
-
-    messages.success(request, f"Previews actualizados: {updated}. Sin resultados: {errors}.")
-    return redirect("dashboard")
-
-
-@login_required
 def delete_playlist_view(request, pk):
     playlist = get_object_or_404(Playlist, pk=pk)
     if request.method == "POST":
@@ -363,7 +335,6 @@ def import_csv_view(request):
                 genre=(row.get("genre") or row.get("Genre") or "")[:100],
                 spotify_url=(row.get("spotify_url") or row.get("spotify") or row.get("Spotify") or "")[:200],
                 tab_url=(row.get("tab_url") or row.get("tab") or row.get("Tab") or "")[:200],
-                preview_url=(row.get("preview_url") or row.get("Preview") or "")[:200],
                 created_by=request.user,
             )
             created += 1
