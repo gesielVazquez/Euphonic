@@ -236,17 +236,20 @@ def backfill_artwork_view(request):
     updated = 0
     errors = 0
     for song in songs:
-        results = provider_search(f"{song.title} {song.artist}", limit=3)
-        artwork = ""
-        for r in results:
-            if r["artwork_url"]:
-                artwork = r["artwork_url"]
-                break
-        if artwork:
-            song.artwork_url = artwork
-            song.save(update_fields=["artwork_url"])
-            updated += 1
-        else:
+        try:
+            results = provider_search(f"{song.title} {song.artist}", limit=3)
+            artwork = ""
+            for r in results:
+                if r["artwork_url"]:
+                    artwork = r["artwork_url"]
+                    break
+            if artwork:
+                song.artwork_url = artwork
+                song.save(update_fields=["artwork_url"])
+                updated += 1
+            else:
+                errors += 1
+        except Exception:
             errors += 1
 
     messages.success(request, f"Carátulas actualizadas: {updated}. Sin resultados: {errors}.")
@@ -263,17 +266,20 @@ def backfill_preview_view(request):
     updated = 0
     errors = 0
     for song in songs:
-        results = provider_search(f"{song.title} {song.artist}", limit=3)
-        preview = ""
-        for r in results:
-            if r.get("preview_url"):
-                preview = r["preview_url"]
-                break
-        if preview:
-            song.preview_url = preview
-            song.save(update_fields=["preview_url"])
-            updated += 1
-        else:
+        try:
+            results = provider_search(f"{song.title} {song.artist}", limit=3)
+            preview = ""
+            for r in results:
+                if r.get("preview_url"):
+                    preview = r["preview_url"]
+                    break
+            if preview:
+                song.preview_url = preview
+                song.save(update_fields=["preview_url"])
+                updated += 1
+            else:
+                errors += 1
+        except Exception:
             errors += 1
     messages.success(request, f"Previews actualizados: {updated}. Sin resultados: {errors}.")
     return redirect("dashboard")
