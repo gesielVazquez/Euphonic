@@ -5,6 +5,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView, D
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -198,34 +199,50 @@ def dashboard_view(request):
     })
 
 
+def _csv_escape(val):
+    s = str(val or "")
+    if "," in s or '"' in s or "\n" in s:
+        s = '"' + s.replace('"', '""') + '"'
+    return s
+
+
 @login_required
 def export_playlist_view(request, pk):
     playlist = get_object_or_404(Playlist, pk=pk)
-    lines = [f"Playlist #{playlist.pk} — {playlist.created_at.strftime('%d/%m/%Y %H:%M')}",
-             f"Generada por: {playlist.created_by.username}",
-             "=" * 40]
+    lines = ["order,title,artist,genre,rating"]
     for entry in playlist.entries.all():
         avg = entry.song.average_rating()
-        rating_str = f"{avg:.1f}★" if avg else "—"
-        lines.append(f"{entry.order}. {entry.song.title} — {entry.song.artist} [{rating_str}]")
-    lines.append(f"\n{playlist.entries.count()} canciones en total.")
-    resp = render(request, "songs/playlist_export.txt", {"content": "\n".join(lines)},
-                  content_type="text/plain; charset=utf-8")
-    resp["Content-Disposition"] = f'attachment; filename="playlist-{playlist.pk}.txt"'
+        rating_str = f"{avg:.1f}" if avg else ""
+        lines.append(
+            f"{entry.order},"
+            f"{_csv_escape(entry.song.title)},"
+            f"{_csv_escape(entry.song.artist)},"
+            f"{_csv_escape(entry.song.genre)},"
+            f"{rating_str}"
+        )
+    content = "\n".join(lines) + "\n"
+    resp = HttpResponse(content, content_type="text/csv; charset=utf-8")
+    resp["Content-Disposition"] = f'attachment; filename="playlist-{playlist.pk}.csv"'
     return resp
 
 
 @login_required
 def export_songs_view(request):
-    lines = ["Canciones en Euphonic", "=" * 40]
+    lines = ["title,artist,genre,spotify_url,tab_url,rating"]
     for song in Song.objects.all():
         avg = song.average_rating()
-        rating_str = f"{avg:.1f}★" if avg else "—"
-        lines.append(f"{song.title} — {song.artist} | {song.genre or '—'} | {rating_str}")
-    lines.append(f"\nTotal: {Song.objects.count()} canciones.")
-    resp = render(request, "songs/playlist_export.txt", {"content": "\n".join(lines)},
-                  content_type="text/plain; charset=utf-8")
-    resp["Content-Disposition"] = 'attachment; filename="euphonic-canciones.txt"'
+        rating_str = f"{avg:.1f}" if avg else ""
+        lines.append(
+            f"{_csv_escape(song.title)},"
+            f"{_csv_escape(song.artist)},"
+            f"{_csv_escape(song.genre)},"
+            f"{_csv_escape(song.spotify_url)},"
+            f"{_csv_escape(song.tab_url)},"
+            f"{rating_str}"
+        )
+    content = "\n".join(lines) + "\n"
+    resp = HttpResponse(content, content_type="text/csv; charset=utf-8")
+    resp["Content-Disposition"] = 'attachment; filename="euphonic-canciones.csv"'
     return resp
 
 
