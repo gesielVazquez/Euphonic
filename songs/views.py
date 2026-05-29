@@ -209,8 +209,10 @@ def export_playlist_view(request, pk):
         rating_str = f"{avg:.1f}★" if avg else "—"
         lines.append(f"{entry.order}. {entry.song.title} — {entry.song.artist} [{rating_str}]")
     lines.append(f"\n{playlist.entries.count()} canciones en total.")
-    return render(request, "songs/playlist_export.txt", {"content": "\n".join(lines)},
+    resp = render(request, "songs/playlist_export.txt", {"content": "\n".join(lines)},
                   content_type="text/plain; charset=utf-8")
+    resp["Content-Disposition"] = f'attachment; filename="playlist-{playlist.pk}.txt"'
+    return resp
 
 
 @login_required
@@ -221,8 +223,10 @@ def export_songs_view(request):
         rating_str = f"{avg:.1f}★" if avg else "—"
         lines.append(f"{song.title} — {song.artist} | {song.genre or '—'} | {rating_str}")
     lines.append(f"\nTotal: {Song.objects.count()} canciones.")
-    return render(request, "songs/playlist_export.txt", {"content": "\n".join(lines)},
+    resp = render(request, "songs/playlist_export.txt", {"content": "\n".join(lines)},
                   content_type="text/plain; charset=utf-8")
+    resp["Content-Disposition"] = 'attachment; filename="euphonic-canciones.txt"'
+    return resp
 
 
 @login_required

@@ -295,6 +295,31 @@
     {% block content %}{% endblock %}
   </div>
   <script>
+    // Audio preview toggle (play/stop)
+    let currentAudio = null;
+    let currentBtn = null;
+    function togglePreview(audioId, btn) {
+      const audio = document.getElementById(audioId);
+      if (!audio) return;
+      if (currentAudio && currentAudio !== audio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        if (currentBtn) currentBtn.textContent = '▶ Preview';
+      }
+      if (audio.paused) {
+        audio.play();
+        btn.textContent = '⏹ Stop';
+        currentAudio = audio;
+        currentBtn = btn;
+        audio.onended = () => { btn.textContent = '▶ Preview'; currentAudio = null; currentBtn = null; };
+      } else {
+        audio.pause();
+        audio.currentTime = 0;
+        btn.textContent = '▶ Preview';
+        currentAudio = null;
+        currentBtn = null;
+      }
+    }
     // Theme toggle
     (function() {
       const btn = document.getElementById('theme-toggle');
