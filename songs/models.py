@@ -10,10 +10,10 @@ class Song(models.Model):
     artist = models.CharField(max_length=200, verbose_name="artista")
     genre = models.CharField(max_length=100, blank=True, verbose_name="género")
 
-    spotify_url = models.URLField(blank=True, verbose_name="enlace Spotify")
-    tab_url = models.URLField(blank=True, verbose_name="enlace tablatura")
-    artwork_url = models.URLField(blank=True, verbose_name="portada")
-    preview_url = models.URLField(blank=True, verbose_name="preview audio")
+    spotify_url = models.URLField(blank=True, max_length=500, verbose_name="enlace Spotify")
+    tab_url = models.URLField(blank=True, max_length=500, verbose_name="enlace tablatura")
+    artwork_url = models.URLField(blank=True, max_length=500, verbose_name="portada")
+    preview_url = models.URLField(blank=True, max_length=500, verbose_name="preview audio")
 
     last_played_at = models.DateTimeField(
         null=True, blank=True,
