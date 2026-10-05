@@ -83,13 +83,22 @@ Euphonic/
   - `DJANGO_CSRF_TRUSTED_ORIGINS=https://euphonic-id2r.onrender.com`
   - `DATABASE_URL` (PostgreSQL Internal URL)
   - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL`
+  - `USER1_USERNAME`, `USER1_PASSWORD`
   - `USER2_USERNAME`, `USER2_PASSWORD`
+  - (opcional) `USER3_USERNAME`, `USER3_PASSWORD`, ... para más integrantes
+- **Renombrar un usuario**: `python manage.py rename_user <viejo> <nuevo> [--email ...]`.
+  Mantiene el mismo ID, así que conserva calificaciones, canciones y playlists.
+  Ojo: cambiar `ADMIN_USERNAME` en las env vars NO renombra, crea un admin nuevo
+  y deja el anterior activo como superusuario.
+
+## Usuarios
+- `manage.py setup_users` crea el admin (`ADMIN_*`, superusuario) y todos los
+  `USER{n}_USERNAME`/`USER{n}_PASSWORD` que encuentre en el entorno. Es
+  idempotente: no duplica usuarios en cada build. Para sumar a alguien al grupo
+  basta con agregar el par de variables, sin tocar código.
+- Nombres actuales: admin (superusuario), user1, user2.
 
 ## iTunes Search API
 - Ruta: `/buscar/` → vista `search_songs_view`
 - `songs/itunes.py`: `search_songs(query)` devuelve lista con `track_name`, `artist_name`, `album`, `genre`, `artwork_url`, `track_view_url`, `preview_url`
 - Botón "Añadir" en cada resultado enlaza a `/nueva/?title=...&artist=...&genre=...&spotify_url=...` con pre‑llenado automático del formulario
-
-## Usuarios
-- admin / contraseña elegida por el usuario
-- usuario2 / contraseña elegida por el usuario
