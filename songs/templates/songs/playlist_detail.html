@@ -8,12 +8,16 @@
     <div class="meta">{{ playlist.created_at|date:"d/m/Y H:i" }} · generada por {{ playlist.created_by.username }}</div>
   </div>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-    <a href="{% url 'generate_playlist' %}" class="btn btn-primary">🎲 Generar otra</a>
+    {% if playlist.created_by_id == user.id or user.is_superuser %}
+      <a href="{% url 'generate_playlist' %}" class="btn btn-primary">🎲 Generar otra</a>
+    {% endif %}
     <a href="{% url 'export_playlist' playlist.pk %}" class="btn btn-outline">📄 Exportar</a>
-    <a href="{% url 'toggle_playlist_visibility' playlist.pk %}" class="btn btn-outline">
-      {{ playlist.is_public|yesno:"🔒 Hacer privada,🔗 Hacer pública" }}
-    </a>
-    <a href="{% url 'delete_playlist' playlist.pk %}" class="btn btn-danger">🗑 Eliminar</a>
+    {% if playlist.created_by_id == user.id or user.is_superuser %}
+      <a href="{% url 'toggle_playlist_visibility' playlist.pk %}" class="btn btn-outline">
+        {{ playlist.is_public|yesno:"🔒 Hacer privada,🔗 Hacer pública" }}
+      </a>
+      <a href="{% url 'delete_playlist' playlist.pk %}" class="btn btn-danger">🗑 Eliminar</a>
+    {% endif %}
   </div>
 </div>
 

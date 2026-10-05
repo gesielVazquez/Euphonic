@@ -16,6 +16,10 @@
 {% if query and page_obj.paginator.count == 0 %}
   <div class="empty">
     <p>Sin resultados para «{{ query }}».</p>
+    <p style="font-size:.9rem;color:var(--text2);margin-bottom:1rem">
+      Si la canción no existe en los catálogos en línea, añádela manualmente.
+    </p>
+    <a href="{% url 'song_create' %}" class="btn btn-outline">Añadir manualmente</a>
   </div>
 {% endif %}
 

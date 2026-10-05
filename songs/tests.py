@@ -312,3 +312,130 @@ class GeneratePlaylistTest(TestCase):
         s = Song.objects.create(title="Only One", artist="A", created_by=self.user)
         resp = self.client.get(reverse("generate_playlist"))
         self.assertFalse(Playlist.objects.exists())
+
+
+class SongOwnershipTest(TestCase):
+    """Solo el creador de la canción (o un superusuario) puede eliminarla."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user("owner", password="pass123")
+        self.other = User.objects.create_user("other", password="pass123")
+        self.admin = User.objects.create_superuser(
+            "boss", "boss@euphonic.app", "pass123"
+        )
+        self.song = Song.objects.create(
+            title="Test", artist="Artist", created_by=self.owner,
+        )
+        self.client = Client()
+
+    def test_other_user_cannot_delete_song(self):
+        self.client.login(username="other", password="pass123")
+        resp = self.client.post(reverse("song_delete", args=[self.song.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(Song.objects.filter(pk=self.song.pk).exists())
+
+    def test_superuser_can_delete_song(self):
+        self.client.login(username="boss", password="pass123")
+        self.client.post(reverse("song_delete", args=[self.song.pk]))
+        self.assertFalse(Song.objects.filter(pk=self.song.pk).exists())
+
+    def test_owner_can_delete_song(self):
+        self.client.login(username="owner", password="pass123")
+        self.client.post(reverse("song_delete", args=[self.song.pk]))
+        self.assertFalse(Song.objects.filter(pk=self.song.pk).exists())
+
+    def test_other_user_can_edit_song(self):
+        self.client.login(username="other", password="pass123")
+        resp = self.client.post(reverse("song_update", args=[self.song.pk]), {
+            "title": "Test editado",
+            "artist": "Artist",
+            "genre": "Rock",
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.song.refresh_from_db()
+        self.assertEqual(self.song.title, "Test editado")
+
+
+class LoginRequiredOnMutatingViewsTest(TestCase):
+    """rate_song y generate_playlist deben redirigir al login, no devolver 500."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("testuser", password="pass123")
+        self.song = Song.objects.create(
+            title="Test", artist="Artist", created_by=self.user,
+        )
+        for i in range(5):
+            Song.objects.create(title=f"S{i}", artist="A", created_by=self.user)
+
+    def test_rate_song_anonymous_redirects_to_login(self):
+        resp = self.client.post(
+            reverse("rate_song", args=[self.song.pk]), {"value": 5}
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/accounts/login/", resp.url)
+        self.assertFalse(Rating.objects.exists())
+
+    def test_generate_playlist_anonymous_redirects_to_login(self):
+        resp = self.client.get(reverse("generate_playlist"))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/accounts/login/", resp.url)
+        self.assertFalse(Playlist.objects.exists())
+
+
+class PlaylistOwnershipTest(TestCase):
+    """Solo el dueño puede eliminar una playlist o cambiar su visibilidad."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user("owner", password="pass123")
+        self.other = User.objects.create_user("other", password="pass123")
+        self.song = Song.objects.create(
+            title="Test", artist="Artist", created_by=self.owner,
+        )
+        self.playlist = Playlist.objects.create(created_by=self.owner)
+        PlaylistSong.objects.create(playlist=self.playlist, song=self.song, order=1)
+        self.client = Client()
+
+    def test_other_user_cannot_delete_playlist(self):
+        self.client.login(username="other", password="pass123")
+        resp = self.client.post(reverse("delete_playlist", args=[self.playlist.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(Playlist.objects.filter(pk=self.playlist.pk).exists())
+
+    def test_other_user_cannot_toggle_visibility(self):
+        self.client.login(username="other", password="pass123")
+        resp = self.client.get(reverse("toggle_playlist_visibility", args=[self.playlist.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.playlist.refresh_from_db()
+        self.assertFalse(self.playlist.is_public)
+
+    def test_other_user_can_view_and_export_playlist(self):
+        self.client.login(username="other", password="pass123")
+        self.assertEqual(
+            self.client.get(reverse("playlist_detail", args=[self.playlist.pk])).status_code,
+            200,
+        )
+        self.assertEqual(
+            self.client.get(reverse("export_playlist", args=[self.playlist.pk])).status_code,
+            200,
+        )
+
+    def test_owner_can_delete_and_toggle(self):
+        self.client.login(username="owner", password="pass123")
+        self.client.get(reverse("toggle_playlist_visibility", args=[self.playlist.pk]))
+        self.playlist.refresh_from_db()
+        self.assertTrue(self.playlist.is_public)
+
+        self.client.post(reverse("delete_playlist", args=[self.playlist.pk]))
+        self.assertFalse(Playlist.objects.filter(pk=self.playlist.pk).exists())
+
+    def test_superuser_can_delete_and_toggle_others_playlist(self):
+        admin = User.objects.create_superuser(
+            "boss", "boss@euphonic.app", "pass123"
+        )
+        self.client.login(username="boss", password="pass123")
+        self.client.get(reverse("toggle_playlist_visibility", args=[self.playlist.pk]))
+        self.playlist.refresh_from_db()
+        self.assertTrue(self.playlist.is_public)
+
+        self.client.post(reverse("delete_playlist", args=[self.playlist.pk]))
+        self.assertFalse(Playlist.objects.filter(pk=self.playlist.pk).exists())

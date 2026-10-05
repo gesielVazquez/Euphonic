@@ -4,3 +4,6 @@ __pycache__/
 staticfiles/
 .env
 .venv/
+
+# Archivos Java sueltos (prácticas, ajenos al proyecto Django)
+*.java

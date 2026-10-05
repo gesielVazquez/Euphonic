@@ -73,10 +73,12 @@
 
         <div class="actions mt-3" style="display:flex;gap:.5rem">
           <a href="{% url 'song_update' song.pk %}" class="btn btn-primary btn-sm">Editar</a>
-          <form method="post" action="{% url 'song_delete' song.pk %}" class="inline-form">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar «{{ song.title }}»?')">Eliminar</button>
-          </form>
+          {% if song.created_by_id == user.id or user.is_superuser %}
+            <form method="post" action="{% url 'song_delete' song.pk %}" class="inline-form">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar «{{ song.title }}»? Se perderán sus calificaciones y desaparecerá de las playlists.')">Eliminar</button>
+            </form>
+          {% endif %}
         </div>
       </div>
     {% endfor %}
@@ -98,8 +100,12 @@
 
 {% else %}
   <div class="empty">
-    <p>No hay canciones todavía.</p>
-    <a href="{% url 'song_create' %}" class="btn btn-primary">Añadir primera canción</a>
+    {% if request.GET.q %}
+      <p>No se encontraron canciones para «{{ request.GET.q }}».</p>
+    {% else %}
+      <p>No hay canciones todavía.</p>
+    {% endif %}
+    <a href="{% url 'song_search' %}{% if request.GET.q %}?q={{ request.GET.q|urlencode }}{% endif %}" class="btn btn-primary">Búsqueda Inteligente</a>
   </div>
 {% endif %}
 

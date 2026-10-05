@@ -1,16 +1,25 @@
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-og76h@!e-z^2e-#%eij2o7+g&_x8ae!)4@d(+mf#1@d!s6m@yu",
-)
-
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
+
+_secret_key = os.environ.get("DJANGO_SECRET_KEY")
+if _secret_key:
+    SECRET_KEY = _secret_key
+elif DEBUG or "test" in sys.argv:
+    # Solo desarrollo local. En producción DJANGO_SECRET_KEY es obligatoria.
+    SECRET_KEY = "django-insecure-solo-desarrollo-local-no-usar-en-produccion"
+else:
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY es obligatoria cuando DJANGO_DEBUG=False. "
+        "Generá una con: python -c \"import secrets; print(secrets.token_urlsafe(50))\""
+    )
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 

@@ -43,7 +43,7 @@ class Song(models.Model):
     def user_rating(self, user):
         try:
             return self.ratings.get(user=user).value
-        except:
+        except Rating.DoesNotExist:
             return None
 
     def __str__(self):

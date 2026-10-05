@@ -10,10 +10,16 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.utils import timezone
+from django.db import transaction
 from django.db.models import Q, Count, Avg
 
 from .models import Song, Rating, Playlist, PlaylistSong
 from .providers import search_songs as provider_search
+
+MIN_SONGS_FOR_PLAYLIST = 3
+MIN_FRESH_CANDIDATES = 8
+MAX_REPETITION_DAYS = 15
+PLAYLIST_SIZE_RANGE = (8, 10)
 
 
 class SongListView(LoginRequiredMixin, ListView):
@@ -70,7 +76,15 @@ class SongDeleteView(LoginRequiredMixin, DeleteView):
     model = Song
     success_url = reverse_lazy("song_list")
 
+    def dispatch(self, request, *args, **kwargs):
+        song = get_object_or_404(Song, pk=kwargs.get("pk"))
+        if song.created_by_id != request.user.id and not request.user.is_superuser:
+            messages.error(request, "Esa canción no es tuya, no podés eliminarla.")
+            return redirect("song_list")
+        return super().dispatch(request, *args, **kwargs)
 
+
+@login_required
 def rate_song(request, pk):
     song = get_object_or_404(Song, pk=pk)
     if request.method == "POST":
@@ -126,6 +140,36 @@ def _weighted_sample(population, weights, k):
     return selected
 
 
+def _fresh_candidates(now):
+    candidates = Song.objects.all()
+    for days_back in range(MAX_REPETITION_DAYS, -1, -1):
+        cutoff = now - timedelta(days=days_back)
+        candidates = Song.objects.filter(
+            Q(last_played_at__isnull=True) | Q(last_played_at__lt=cutoff)
+        )
+        if candidates.count() >= MIN_FRESH_CANDIDATES:
+            break
+    if candidates.count() < MIN_SONGS_FOR_PLAYLIST:
+        return Song.objects.all()
+    return candidates
+
+
+@transaction.atomic
+def _create_playlist_for(user, now=None):
+    now = now or timezone.now()
+    candidates_list = list(_fresh_candidates(now))
+    weights = [_song_weight(s) for s in candidates_list]
+    target_size = min(random.randint(*PLAYLIST_SIZE_RANGE), len(candidates_list))
+    selected = _weighted_sample(candidates_list, weights, target_size)
+
+    playlist = Playlist.objects.create(created_by=user)
+    for i, song in enumerate(selected):
+        PlaylistSong.objects.create(playlist=playlist, song=song, order=i + 1)
+        song.last_played_at = now
+        song.save(update_fields=["last_played_at"])
+    return playlist
+
+
 class PlaylistListView(LoginRequiredMixin, ListView):
     model = Playlist
     template_name = "songs/playlist_list.html"
@@ -138,38 +182,17 @@ class PlaylistDetailView(LoginRequiredMixin, DetailView):
     template_name = "songs/playlist_detail.html"
 
 
+@login_required
 def generate_playlist(request):
-    total_songs = Song.objects.count()
-    if total_songs < 3:
-        messages.error(request, "Se necesitan al menos 3 canciones para generar una playlist.")
+    if Song.objects.count() < MIN_SONGS_FOR_PLAYLIST:
+        messages.error(
+            request,
+            f"Se necesitan al menos {MIN_SONGS_FOR_PLAYLIST} canciones para generar una playlist.",
+        )
         return redirect("song_list")
 
-    now = timezone.now()
-
-    for days_back in range(15, -1, -1):
-        cutoff = now - timedelta(days=days_back)
-        candidates = Song.objects.filter(
-            Q(last_played_at__isnull=True) | Q(last_played_at__lt=cutoff)
-        )
-        if candidates.count() >= 8:
-            break
-
-    if candidates.count() < 3:
-        candidates = Song.objects.all()
-
-    candidates_list = list(candidates)
-    weights = [_song_weight(s) for s in candidates_list]
-
-    target_size = min(random.randint(8, 10), len(candidates_list))
-    selected = _weighted_sample(candidates_list, weights, target_size)
-
-    playlist = Playlist.objects.create(created_by=request.user)
-    for i, song in enumerate(selected):
-        PlaylistSong.objects.create(playlist=playlist, song=song, order=i + 1)
-        song.last_played_at = now
-        song.save(update_fields=["last_played_at"])
-
-    messages.success(request, f"Playlist generada con {len(selected)} canciones.")
+    playlist = _create_playlist_for(request.user)
+    messages.success(request, f"Playlist generada con {playlist.entries.count()} canciones.")
     return redirect("playlist_detail", pk=playlist.pk)
 
 
@@ -309,6 +332,9 @@ def backfill_preview_view(request):
 @login_required
 def delete_playlist_view(request, pk):
     playlist = get_object_or_404(Playlist, pk=pk)
+    if playlist.created_by_id != request.user.id and not request.user.is_superuser:
+        messages.error(request, "Esa playlist no es tuya, no podés eliminarla.")
+        return redirect("playlist_list")
     if request.method == "POST":
         playlist.delete()
         messages.success(request, "Playlist eliminada.")
@@ -318,9 +344,11 @@ def delete_playlist_view(request, pk):
 
 @login_required
 def generate_weekly_playlist_view(request):
-    total_songs = Song.objects.count()
-    if total_songs < 3:
-        messages.error(request, "Se necesitan al menos 3 canciones para generar una playlist.")
+    if Song.objects.count() < MIN_SONGS_FOR_PLAYLIST:
+        messages.error(
+            request,
+            f"Se necesitan al menos {MIN_SONGS_FOR_PLAYLIST} canciones para generar una playlist.",
+        )
         return redirect("playlist_list")
 
     now = timezone.now()
@@ -329,29 +357,8 @@ def generate_weekly_playlist_view(request):
         messages.info(request, "Ya tenés una playlist generada esta semana.")
         return redirect("playlist_list")
 
-    for days_back in range(15, -1, -1):
-        cutoff = now - timedelta(days=days_back)
-        candidates = Song.objects.filter(
-            Q(last_played_at__isnull=True) | Q(last_played_at__lt=cutoff)
-        )
-        if candidates.count() >= 8:
-            break
-
-    if candidates.count() < 3:
-        candidates = Song.objects.all()
-
-    candidates_list = list(candidates)
-    weights = [_song_weight(s) for s in candidates_list]
-    target_size = min(random.randint(8, 10), len(candidates_list))
-    selected = _weighted_sample(candidates_list, weights, target_size)
-
-    playlist = Playlist.objects.create(created_by=request.user)
-    for i, song in enumerate(selected):
-        PlaylistSong.objects.create(playlist=playlist, song=song, order=i + 1)
-        song.last_played_at = now
-        song.save(update_fields=["last_played_at"])
-
-    messages.success(request, f"Playlist semanal generada con {len(selected)} canciones.")
+    playlist = _create_playlist_for(request.user, now=now)
+    messages.success(request, f"Playlist semanal generada con {playlist.entries.count()} canciones.")
     return redirect("playlist_detail", pk=playlist.pk)
 
 
@@ -406,6 +413,9 @@ def public_playlist_view(request, token):
 @login_required
 def toggle_playlist_visibility_view(request, pk):
     playlist = get_object_or_404(Playlist, pk=pk)
+    if playlist.created_by_id != request.user.id and not request.user.is_superuser:
+        messages.error(request, "Esa playlist no es tuya, no podés cambiar su visibilidad.")
+        return redirect("playlist_detail", pk=playlist.pk)
     playlist.is_public = not playlist.is_public
     playlist.save(update_fields=["is_public"])
     msg = "pública" if playlist.is_public else "privada"
