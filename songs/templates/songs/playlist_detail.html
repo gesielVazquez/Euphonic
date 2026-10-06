@@ -56,9 +56,7 @@
                       onclick="togglePreview('preview-{{ entry.song.pk }}', this)">▶ Preview</button>
           <audio id="preview-{{ entry.song.pk }}" src="{{ entry.song.preview_url }}" preload="none"></audio>
         {% endif %}
-        {% if entry.song.spotify_url %}
-          <a href="{{ entry.song.spotify_url }}" target="_blank" class="btn btn-outline btn-sm">Spotify</a>
-        {% endif %}
+        <a href="{{ entry.song.spotify_link }}" target="_blank" class="btn btn-outline btn-sm">Spotify</a>
         {% if entry.song.tab_url %}
           <a href="{{ entry.song.tab_url }}" target="_blank" class="btn btn-outline btn-sm">Tablatura</a>
         {% endif %}

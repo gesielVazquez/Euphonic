@@ -1,3 +1,4 @@
+import urllib.parse
 import uuid
 
 from django.db import models
@@ -45,6 +46,19 @@ class Song(models.Model):
             return self.ratings.get(user=user).value
         except Rating.DoesNotExist:
             return None
+
+    @property
+    def spotify_search_url(self):
+        """Busca la canción en Spotify. No requiere API key ni cuenta."""
+        query = urllib.parse.quote(f"{self.title} {self.artist}")
+        return f"https://open.spotify.com/search/{query}"
+
+    @property
+    def spotify_link(self):
+        """Enlace a Spotify: el guardado si es de Spotify, si no la búsqueda."""
+        if self.spotify_url and "spotify.com" in self.spotify_url.lower():
+            return self.spotify_url
+        return self.spotify_search_url
 
     def __str__(self):
         return f"{self.title} — {self.artist}"
