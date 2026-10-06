@@ -15,6 +15,9 @@
       {% endif %}
     {% endfor %}
     <div style="display:flex;gap:.5rem;margin-top:1.2rem">
+      {% if not object %}
+        <button type="button" data-title="{{ form.title.value|default:'' }}" data-artist="{{ form.artist.value|default:'' }}" onclick="window.open('https://open.spotify.com/search/' + encodeURIComponent(this.dataset.title + ' ' + this.dataset.artist), '_blank')" class="btn btn-outline btn-sm">🔍 Spotify search</button>
+      {% endif %}
       <button type="submit" class="btn btn-primary">Guardar</button>
       <a href="{% url 'song_list' %}" class="btn btn-outline">Cancelar</a>
     </div>
