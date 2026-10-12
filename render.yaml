@@ -1,0 +1,58 @@
+# ============================================================
+# EUPHONIC · render.yaml (Blueprint) — PLANTILLA para Previews
+#
+# IMPORTANTE:
+#  - PLANTILLA PARA EL FUTURO: Render solo la usa cuando conectás
+#    este repo como Blueprint en el dashboard (Dashboard → New →
+#    Blueprint → este repositorio). Mientras tu servicio esté
+#    configurado a mano, este archivo es INERTE y no cambia nada.
+#  - Las Previews requieren plan Pro o superior (en Free no existen).
+#  - Al conectar el blueprint, Render preguntará si "adoptar" el
+#    servicio existente para NO duplicarlo. Respondé que sí.
+#
+# PASOS cuando subas a Pro:
+#   1) Creá en el dashboard un Environment Group llamado
+#      "euphonic-shared" con: DJANGO_SECRET_KEY, ADMIN_USERNAME,
+#      ADMIN_PASSWORD, ADMIN_EMAIL, USER1_USERNAME, USER1_PASSWORD,
+#      USER2_USERNAME, USER2_PASSWORD (y los que quieras).
+#   2) Conectá el blueprint y adoptá el servicio actual.
+#   3) Cada PR generará una preview con SU PROPIA base de datos
+#      vacía (no toca la de producción).
+# ============================================================
+
+previews:
+  generation: automatic   # preview automática en cada PR
+  plan: 0.1c-512mb        # plan mínimo para las previews (ahorras)
+  numInstances: 1
+  expireAfterDays: 7      # se autoelimina tras 7 días sin cambios
+
+services:
+  - type: web
+    name: euphonic
+    runtime: python
+    plan: free            # producción sigue en el plan que tengas
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py setup_users
+    startCommand: gunicorn euphonic.wsgi
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: euphonic-db
+          property: internalConnectionString
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_ALLOWED_HOSTS
+        # ".onrender.com" cubre el dominio de producción Y el de
+        # cualquier preview (subdominios). Menos env vars que mantener.
+        value: ".onrender.com"
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        value: "https://.onrender.com"
+      # Secretos y usuarios: vienen del environment group creado en el
+      # dashboard (así no quedan en el repo). El group se copia a las
+      # previews automáticamente.
+      - fromGroup: euphonic-shared
+
+databases:
+  - name: euphonic-db
+    plan: free
+    previewPlan: free     # cada preview obtiene SU PROPIA BD vacía
