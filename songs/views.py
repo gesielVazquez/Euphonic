@@ -227,6 +227,16 @@ def dashboard_view(request):
         .filter(avg_r__isnull=False)
         .order_by("avg_r")[:5]
     )
+    estado_colors = {"idea": "#3b82f6", "progreso": "#d97706", "completo": "#22c55e"}
+    estado_items = [
+        {
+            "value": value,
+            "label": label,
+            "count": Song.objects.filter(estado=value).count(),
+            "color": estado_colors.get(value, "#8888aa"),
+        }
+        for value, label in Song.ESTADO_CHOICES
+    ]
     return render(request, "songs/dashboard.html", {
         "total_songs": total_songs,
         "total_ratings": total_ratings,
@@ -234,6 +244,7 @@ def dashboard_view(request):
         "avg_all": round(avg_all, 2) if avg_all else None,
         "top_rated": top_rated,
         "worst_rated": worst_rated,
+        "estado_items": estado_items,
     })
 
 

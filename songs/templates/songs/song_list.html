@@ -17,7 +17,7 @@
   {% for artist, songs in songs_by_artist %}
     <div class="artist-header">{{ artist }}</div>
     {% for song in songs %}
-      <div class="card fade-in">
+      <div class="card fade-in" style="border-width:2px;border-color:{% if song.estado == 'idea' %}#3b82f6{% elif song.estado == 'progreso' %}#d97706{% else %}#22c55e{% endif %}">
         <div style="display:flex;gap:1rem;align-items:start">
           {% if song.artwork_url %}
             <img src="{{ song.artwork_url }}" alt="" class="cover">
@@ -39,23 +39,23 @@
               </span>
             </div>
           </div>
-          <div style="display:flex;gap:.35rem;flex-wrap:wrap">
-            {% if song.preview_url %}
-              <button class="btn btn-outline btn-sm" onclick="togglePreview('preview-{{ song.pk }}', this)">▶ Preview</button>
-              <audio id="preview-{{ song.pk }}" src="{{ song.preview_url }}" preload="none"></audio>
-            {% endif %}
-            <a href="{{ song.spotify_link }}" target="_blank" class="btn btn-outline btn-sm">Spotify</a>
-            {% if song.tab_url %}
-              <a href="{{ song.tab_url }}" target="_blank" class="btn btn-outline btn-sm">Tablatura</a>
-            {% endif %}
-          </div>
-          <div class="meta mt-3" style="display:flex;justify-content:flex-end">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:.35rem">
+            <div style="display:flex;gap:.35rem;flex-wrap:wrap;justify-content:center">
+              {% if song.preview_url %}
+                <button class="btn btn-outline btn-sm" onclick="togglePreview('preview-{{ song.pk }}', this)">▶ Preview</button>
+                <audio id="preview-{{ song.pk }}" src="{{ song.preview_url }}" preload="none"></audio>
+              {% endif %}
+              <a href="{{ song.spotify_link }}" target="_blank" class="btn btn-outline btn-sm">Spotify</a>
+              {% if song.tab_url %}
+                <a href="{{ song.tab_url }}" target="_blank" class="btn btn-outline btn-sm">Tablatura</a>
+              {% endif %}
+            </div>
             <form method="post" action="{% url 'update_song_state' song.pk %}" class="inline-form">
               {% csrf_token %}
               <input type="hidden" name="estado" value="{{ song.estado }}">
-              <button type="button" class="btn btn-sm estado-btn" data-estado="{{ song.estado }}"
+              <button type="button" class="btn estado-btn" data-estado="{{ song.estado }}"
                       onclick="cycleEstado(this)" title="Cambiar estado de la canción"
-                      style="background:{% if song.estado == 'idea' %}#3b82f6{% elif song.estado == 'progreso' %}#d97706{% else %}#22c55e{% endif %};color:#fff;border:none;font-weight:600;padding:.3rem .9rem">
+                      style="background:{% if song.estado == 'idea' %}#3b82f6{% elif song.estado == 'progreso' %}#d97706{% else %}#22c55e{% endif %};color:#fff;border:none;font-weight:700;padding:.65rem 1.5rem;font-size:1.05rem;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.25)">
                 {{ song.get_estado_display }}
               </button>
             </form>
@@ -119,10 +119,10 @@
 {% endif %}
 
 <script>
-  const ESTADO_OPTS = [
-    { value: 'idea', label: 'Idea', bg: '#3b82f6' },
-    { value: 'progreso', label: 'Progreso', bg: '#d97706' },
-    { value: 'completo', label: 'Completo', bg: '#22c55e' },
+const ESTADO_OPTS = [
+    { value: 'idea', label: 'Propuesta', bg: '#3b82f6' },
+    { value: 'progreso', label: 'En Proceso', bg: '#d97706' },
+    { value: 'completo', label: 'Completa', bg: '#22c55e' },
   ];
   function cycleEstado(btn) {
     const cur = btn.dataset.estado || 'idea';

@@ -12,9 +12,9 @@ class Song(models.Model):
     genre = models.CharField(max_length=100, blank=True, verbose_name="género")
 
     ESTADO_CHOICES = [
-        ("idea", "Idea"),
-        ("progreso", "Progreso"),
-        ("completo", "Completo"),
+        ("idea", "Propuesta"),
+        ("progreso", "En Proceso"),
+        ("completo", "Completa"),
     ]
     estado = models.CharField(
         "estado",
