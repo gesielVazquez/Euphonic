@@ -7,3 +7,9 @@ staticfiles/
 
 # Archivos Java sueltos (prácticas, ajenos al proyecto Django)
 *.java
+
+# Backups y salidas de herramientas locales
+*.backup
+graphify-out/
+package-lock.json
+session-*.md

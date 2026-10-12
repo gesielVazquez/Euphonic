@@ -25,6 +25,18 @@
           <div style="flex:1;min-width:0">
             <h3>{{ song.title }}</h3>
             {% if song.genre %}<div class="meta">{{ song.genre }}</div>{% endif %}
+            <div class="meta mt-2" style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+              <span>Estado:</span>
+              <form method="post" action="{% url 'update_song_state' song.pk %}" class="inline-form">
+                {% csrf_token %}
+                <select name="estado" onchange="this.form.submit()"
+                        style="background:{% if song.estado == 'idea' %}#bfdbfe{% elif song.estado == 'progreso' %}#fef08a{% else %}#bbf7d0{% endif %};color:#1f2937;border:none;padding:.3rem .6rem;border-radius:6px;font-weight:600">
+                  <option value="idea" {% if song.estado == 'idea' %}selected{% endif %}>Idea</option>
+                  <option value="progreso" {% if song.estado == 'progreso' %}selected{% endif %}>Progreso</option>
+                  <option value="completo" {% if song.estado == 'completo' %}selected{% endif %}>Completo</option>
+                </select>
+              </form>
+            </div>
             <div class="meta mt-2">
               Promedio:
               <span class="stars">
