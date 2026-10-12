@@ -29,6 +29,18 @@
   </div>
 </div>
 
+<div class="flex-between mb-2" style="margin-top:1.5rem">
+  <h3>Por estado</h3>
+</div>
+<div class="grid-stats">
+  {% for item in estado_items %}
+    <div class="card" style="text-align:center;padding:1.5rem 1rem;border:2px solid {{ item.color }}">
+      <div style="font-size:2rem;font-weight:800;color:{{ item.color }}">{{ item.count }}</div>
+      <div class="meta">{{ item.label }}</div>
+    </div>
+  {% endfor %}
+</div>
+
 <div class="grid-2">
   <div class="card">
     <h3>Mejor calificadas</h3>
