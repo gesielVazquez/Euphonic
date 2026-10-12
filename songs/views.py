@@ -1,11 +1,14 @@
 import random
+import uuid
 from datetime import timedelta
+from pathlib import Path
 
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.core.exceptions import ImproperlyConfigured
+from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -14,13 +17,26 @@ from django.db import transaction
 from django.db.models import Q, Count, Avg
 from django.views.decorators.http import require_POST
 
-from .models import Song, Rating, Playlist, PlaylistSong
+from .models import Song, Rating, Playlist, PlaylistSong, Recording
 from .providers import search_songs as provider_search
+from .storage import get_storage
 
 MIN_SONGS_FOR_PLAYLIST = 3
 MIN_FRESH_CANDIDATES = 8
 MAX_REPETITION_DAYS = 15
 PLAYLIST_SIZE_RANGE = (8, 10)
+
+MAX_RECORDING_BYTES = 200 * 1024 * 1024
+ALLOWED_AUDIO_EXTS = {".m4a", ".mp3", ".ogg", ".wav", ".aac", ".m4b", ".caf"}
+CONTENT_TYPE_BY_EXT = {
+    ".m4a": "audio/mp4",
+    ".mp3": "audio/mpeg",
+    ".ogg": "audio/ogg",
+    ".wav": "audio/wav",
+    ".aac": "audio/aac",
+    ".m4b": "audio/mp4",
+    ".caf": "audio/x-caf",
+}
 
 
 class SongListView(LoginRequiredMixin, ListView):
@@ -41,6 +57,10 @@ class SongListView(LoginRequiredMixin, ListView):
             for r in Rating.objects.filter(user=self.request.user)
         }
         context["user_ratings"] = user_ratings
+        recordings_by_song = {}
+        for rec in Recording.objects.select_related("uploaded_by").order_by("-created_at"):
+            recordings_by_song.setdefault(rec.song_id, []).append(rec)
+        context["recordings_by_song"] = recordings_by_song
         return context
 
 
@@ -112,6 +132,88 @@ def update_song_state(request, pk):
     else:
         messages.error(request, f"Estado inválido: {estado}")
     return redirect(request.META.get("HTTP_REFERER", "song_list"))
+
+
+@login_required
+def recording_upload_view(request):
+    requested_song = None
+    pk = request.GET.get("song") or request.POST.get("song")
+    if pk:
+        try:
+            requested_song = Song.objects.get(pk=pk)
+        except Song.DoesNotExist:
+            pass
+
+    if request.method == "POST":
+        audio = request.FILES.get("audio")
+        song = get_object_or_404(Song, pk=request.POST.get("song"))
+        title = request.POST.get("title", "").strip()
+        note = request.POST.get("note", "").strip()
+
+        if not audio:
+            messages.error(request, "Tenés que elegir un archivo de audio.")
+        elif audio.size > MAX_RECORDING_BYTES:
+            messages.error(request, "El archivo supera el tamaño máximo permitido (200 MB).")
+        else:
+            ext = Path(audio.name).suffix.lower()
+            if ext not in ALLOWED_AUDIO_EXTS:
+                messages.error(request, f"Formato de audio no soportado: {ext or 'sin extensión'}.")
+            else:
+                try:
+                    storage = get_storage()
+                    now = timezone.now()
+                    key = f"recordings/{now:%Y/%m}/{now:%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:8]}{ext}"
+                    storage.save(key, audio)
+                    if not title:
+                        title = f"{now:%d/%m/%Y} — {song.title} (sesión)"
+                    rec = Recording.objects.create(
+                        song=song,
+                        title=title,
+                        storage_key=key,
+                        file_size=audio.size,
+                        uploaded_by=request.user,
+                        note=note,
+                    )
+                    messages.success(request, f"Grabación «{rec.title}» subida.")
+                    return redirect("song_list")
+                except ImproperlyConfigured as exc:
+                    messages.error(request, str(exc))
+                except Exception:
+                    messages.error(request, "No se pudo subir la grabación. Revisá el archivo e intentá de nuevo.")
+
+    return render(request, "songs/recording_form.html", {
+        "song": requested_song,
+        "songs": Song.objects.all(),
+    })
+
+
+@login_required
+def recording_stream_view(request, pk):
+    rec = get_object_or_404(Recording, pk=pk)
+    data = get_storage().read(rec.storage_key)
+    if data is None:
+        raise Http404("El archivo de audio no está disponible.")
+    ext = Path(rec.storage_key).suffix.lower()
+    resp = HttpResponse(data, content_type=CONTENT_TYPE_BY_EXT.get(ext, "application/octet-stream"))
+    resp["Content-Disposition"] = f'inline; filename="grabacion-{rec.pk}{ext}"'
+    resp["Content-Length"] = len(data)
+    return resp
+
+
+@login_required
+@require_POST
+def recording_delete_view(request, pk):
+    rec = get_object_or_404(Recording, pk=pk)
+    if rec.uploaded_by_id != request.user.id and not request.user.is_superuser:
+        messages.error(request, "Solo quien subió la grabación puede eliminarla.")
+        return redirect("song_list")
+    try:
+        get_storage().delete(rec.storage_key)
+    except Exception:
+        pass
+    rec.delete()
+    messages.success(request, f"Grabación «{rec.title}» eliminada.")
+    return redirect("song_list")
 
 
 @login_required

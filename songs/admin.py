@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Song, Rating, Playlist, PlaylistSong
+from .models import Song, Rating, Playlist, PlaylistSong, Recording
 
 
 class RatingInline(admin.TabularInline):
@@ -12,11 +12,17 @@ class PlaylistSongInline(admin.TabularInline):
     extra = 0
 
 
+class RecordingInline(admin.TabularInline):
+    model = Recording
+    extra = 0
+    readonly_fields = ["storage_key", "file_size", "uploaded_by", "created_at"]
+
+
 class SongAdmin(admin.ModelAdmin):
     list_display = ["title", "artist", "genre", "average_rating", "created_by", "last_played_at", "artwork_url"]
     list_filter = ["genre", "created_by"]
     search_fields = ["title", "artist"]
-    inlines = [RatingInline]
+    inlines = [RatingInline, RecordingInline]
 
 
 class PlaylistAdmin(admin.ModelAdmin):
@@ -28,7 +34,15 @@ class PlaylistAdmin(admin.ModelAdmin):
     song_count.short_description = "canciones"
 
 
+class RecordingAdmin(admin.ModelAdmin):
+    list_display = ["title", "song", "uploaded_by", "file_size", "created_at"]
+    list_filter = ["song", "uploaded_by"]
+    search_fields = ["title", "note"]
+    readonly_fields = ["storage_key", "file_size", "uploaded_by", "created_at"]
+
+
 admin.site.register(Song, SongAdmin)
 admin.site.register(Rating)
 admin.site.register(Playlist, PlaylistAdmin)
 admin.site.register(PlaylistSong)
+admin.site.register(Recording, RecordingAdmin)
