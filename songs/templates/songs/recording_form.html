@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card" style="max-width:560px">
+  <h2 style="margin-bottom:.5rem">Subir grabación</h2>
+  <p class="meta">Las grabaciones son privadas: solo las ven los usuarios con sesión iniciada.</p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label>Canción</label>
+    <select name="song" id="rec-song" required>
+      <option value="">— Elegí una canción —</option>
+      {% for s in songs %}
+        <option value="{{ s.pk }}" {% if song and s.pk == song.pk %}selected{% endif %}>
+          {{ s.title }} — {{ s.artist }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <label>Archivo de audio (M4A, MP3, OGG, WAV…)</label>
+    <input type="file" name="audio" id="rec-audio" accept="audio/*" required>
+
+    <div id="rec-meta" class="hidden" style="margin-top:.5rem">
+      <label>Título (opcional — se autocompleta)</label>
+      <input type="text" name="title" id="rec-title" placeholder="Se autocompleta si lo dejas vacío">
+      <label>Nota (opcional)</label>
+      <textarea name="note" rows="2" placeholder="Qué chispa nos salió, qué versionamos…"></textarea>
+    </div>
+
+    <div style="display:flex;gap:.5rem;margin-top:1.2rem">
+      <button type="submit" class="btn btn-primary">Subir grabación</button>
+      <a href="{% url 'song_list' %}" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  const songSel = document.getElementById('rec-song');
+  const audio = document.getElementById('rec-audio');
+  const metaBox = document.getElementById('rec-meta');
+  const title = document.getElementById('rec-title');
+  const days = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+  function refreshTitle() {
+    const s = songSel.selectedOptions[0];
+    const f = audio.files[0];
+    if (!s || !f) { metaBox.classList.add('hidden'); return; }
+    metaBox.classList.remove('hidden');
+    const today = new Date();
+    const date = today.toISOString().slice(0, 10);
+    const cancion = s.textContent.split(' — ')[0];
+    title.value = `${date} ${cancion} — sesión ${days[today.getDay()]}`;
+  }
+  songSel.addEventListener('change', refreshTitle);
+  audio.addEventListener('change', refreshTitle);
+  refreshTitle();
+</script>
+
+{% endblock %}

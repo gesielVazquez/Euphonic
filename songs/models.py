@@ -98,6 +98,38 @@ class Rating(models.Model):
         return f"{self.user.username} → {self.song.title}: {self.value}"
 
 
+class Recording(models.Model):
+    song = models.ForeignKey(
+        Song, on_delete=models.CASCADE, related_name="recordings",
+        verbose_name="canción",
+    )
+    title = models.CharField(max_length=200, verbose_name="título")
+    storage_key = models.CharField(
+        max_length=500, editable=False, verbose_name="clave de almacenamiento",
+    )
+    file_size = models.PositiveIntegerField(default=0, verbose_name="tamaño (bytes)")
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="subida por",
+    )
+    note = models.TextField(blank=True, verbose_name="nota")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "grabación"
+        verbose_name_plural = "grabaciones"
+        ordering = ["-created_at"]
+
+    @property
+    def size_label(self):
+        kb = self.file_size / 1024
+        if kb < 1024:
+            return f"{kb:.0f} KB"
+        return f"{kb / 1024:.1f} MB"
+
+    def __str__(self):
+        return f"{self.title} · {self.song.title}"
+
+
 class Playlist(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(

@@ -1,16 +1,131 @@
 import json
+import tempfile
 from unittest.mock import patch, MagicMock
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, Client, override_settings
 
-from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-from .models import Song, Rating, Playlist, PlaylistSong
+from .models import Song, Rating, Playlist, PlaylistSong, Recording
 from .itunes import search_songs as itunes_search
 from .deezer import search_songs as deezer_search
 from .providers import search_songs as provider_search
+from .storage import get_storage
 from .views import _song_weight, _weighted_sample
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp(prefix="euphonic-tests-"))
+class RecordingTest(TestCase):
+    """Subir / escuchar / eliminar grabaciones (storage local en tests)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("testuser", password="pass123")
+        self.other = User.objects.create_user("other", password="pass123")
+        self.song = Song.objects.create(
+            title="Test", artist="Artist", genre="Rock", created_by=self.user,
+        )
+        self.client = Client()
+        self.client.login(username="testuser", password="pass123")
+
+    def _audio(self, name="test.m4a", content=b"audio-bytes"):
+        return SimpleUploadedFile(name, content, content_type="audio/mp4")
+
+    def test_upload_recording(self):
+        resp = self.client.post(reverse("recording_upload"), {
+            "song": self.song.pk,
+            "audio": self._audio(),
+        })
+        self.assertRedirects(resp, reverse("song_list"))
+        rec = Recording.objects.get(song=self.song)
+        self.assertEqual(rec.uploaded_by, self.user)
+        self.assertIn("sesión", rec.title)
+        self.assertEqual(rec.file_size, len(b"audio-bytes"))
+        self.assertTrue(rec.storage_key.startswith("recordings/"))
+
+    def test_upload_recording_custom_title(self):
+        self.client.post(reverse("recording_upload"), {
+            "song": self.song.pk,
+            "audio": self._audio(),
+            "title": "La chispa del martes",
+        })
+        rec = Recording.objects.get(song=self.song)
+        self.assertEqual(rec.title, "La chispa del martes")
+
+    def test_upload_rejects_unknown_extension(self):
+        resp = self.client.post(reverse("recording_upload"), {
+            "song": self.song.pk,
+            "audio": self._audio("malware.exe", b"x"),
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Recording.objects.exists())
+
+    def test_upload_requires_login(self):
+        self.client.logout()
+        resp = self.client.post(reverse("recording_upload"), {
+            "song": self.song.pk,
+            "audio": self._audio(),
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/accounts/login/", resp.url)
+        self.assertFalse(Recording.objects.exists())
+
+    def test_stream_recording_requires_login(self):
+        rec = Recording.objects.create(
+            song=self.song, title="T", storage_key="recordings/2026/x.m4a",
+            file_size=11, uploaded_by=self.user,
+        )
+        self.client.logout()
+        resp = self.client.get(reverse("recording_stream", args=[rec.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/accounts/login/", resp.url)
+
+    def test_stream_recording_returns_audio(self):
+        storage = get_storage()
+        storage.save("recordings/2026/test.m4a", b"prueba")
+        rec = Recording.objects.create(
+            song=self.song, title="T", storage_key="recordings/2026/test.m4a",
+            file_size=6, uploaded_by=self.user,
+        )
+        resp = self.client.get(reverse("recording_stream", args=[rec.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content, b"prueba")
+        self.assertEqual(resp["Content-Type"], "audio/mp4")
+
+    def test_stream_missing_file_returns_404(self):
+        rec = Recording.objects.create(
+            song=self.song, title="T", storage_key="recordings/2026/inexistente.m4a",
+            file_size=6, uploaded_by=self.user,
+        )
+        resp = self.client.get(reverse("recording_stream", args=[rec.pk]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_delete_requires_owner_or_superuser(self):
+        rec = Recording.objects.create(
+            song=self.song, title="T", storage_key="recordings/2026/del.m4a",
+            file_size=11, uploaded_by=self.user,
+        )
+        self.client.login(username="other", password="pass123")
+        self.client.post(reverse("recording_delete", args=[rec.pk]))
+        self.assertTrue(Recording.objects.filter(pk=rec.pk).exists())
+
+        self.client.login(username="testuser", password="pass123")
+        self.client.post(reverse("recording_delete", args=[rec.pk]))
+        self.assertFalse(Recording.objects.filter(pk=rec.pk).exists())
+
+    def test_song_list_shows_recordings(self):
+        Recording.objects.create(
+            song=self.song, title="Mi grabación", storage_key="recordings/2026/test.m4a",
+            file_size=11, uploaded_by=self.user,
+        )
+        resp = self.client.get(reverse("song_list"))
+        self.assertContains(resp, "Mi grabación")
+        self.assertContains(resp, "🎙 Grabaciones")
+
+    def test_song_list_upload_button(self):
+        resp = self.client.get(reverse("song_list"))
+        self.assertContains(resp, reverse("recording_upload"))
 
 
 class ItunesTest(TestCase):
