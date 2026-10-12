@@ -25,18 +25,6 @@
           <div style="flex:1;min-width:0">
             <h3>{{ song.title }}</h3>
             {% if song.genre %}<div class="meta">{{ song.genre }}</div>{% endif %}
-            <div class="meta mt-2" style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
-              <span>Estado:</span>
-              <form method="post" action="{% url 'update_song_state' song.pk %}" class="inline-form">
-                {% csrf_token %}
-                <select name="estado" onchange="this.form.submit()"
-                        style="background:{% if song.estado == 'idea' %}#bfdbfe{% elif song.estado == 'progreso' %}#fef08a{% else %}#bbf7d0{% endif %};color:#1f2937;border:none;padding:.3rem .6rem;border-radius:6px;font-weight:600">
-                  <option value="idea" {% if song.estado == 'idea' %}selected{% endif %}>Idea</option>
-                  <option value="progreso" {% if song.estado == 'progreso' %}selected{% endif %}>Progreso</option>
-                  <option value="completo" {% if song.estado == 'completo' %}selected{% endif %}>Completo</option>
-                </select>
-              </form>
-            </div>
             <div class="meta mt-2">
               Promedio:
               <span class="stars">
@@ -60,6 +48,17 @@
             {% if song.tab_url %}
               <a href="{{ song.tab_url }}" target="_blank" class="btn btn-outline btn-sm">Tablatura</a>
             {% endif %}
+          </div>
+          <div class="meta mt-3" style="display:flex;justify-content:flex-end">
+            <form method="post" action="{% url 'update_song_state' song.pk %}" class="inline-form">
+              {% csrf_token %}
+              <input type="hidden" name="estado" value="{{ song.estado }}">
+              <button type="button" class="btn btn-sm estado-btn" data-estado="{{ song.estado }}"
+                      onclick="cycleEstado(this)" title="Cambiar estado de la canción"
+                      style="background:{% if song.estado == 'idea' %}#3b82f6{% elif song.estado == 'progreso' %}#d97706{% else %}#22c55e{% endif %};color:#fff;border:none;font-weight:600;padding:.3rem .9rem">
+                {{ song.get_estado_display }}
+              </button>
+            </form>
           </div>
         </div>
 
@@ -118,5 +117,23 @@
     <a href="{% url 'song_search' %}{% if request.GET.q %}?q={{ request.GET.q|urlencode }}{% endif %}" class="btn btn-primary">Búsqueda Inteligente</a>
   </div>
 {% endif %}
+
+<script>
+  const ESTADO_OPTS = [
+    { value: 'idea', label: 'Idea', bg: '#3b82f6' },
+    { value: 'progreso', label: 'Progreso', bg: '#d97706' },
+    { value: 'completo', label: 'Completo', bg: '#22c55e' },
+  ];
+  function cycleEstado(btn) {
+    const cur = btn.dataset.estado || 'idea';
+    const idx = ESTADO_OPTS.findIndex(e => e.value === cur);
+    const next = ESTADO_OPTS[(idx + 1) % ESTADO_OPTS.length];
+    btn.dataset.estado = next.value;
+    btn.textContent = next.label;
+    btn.style.background = next.bg;
+    btn.closest('form').querySelector('input[name="estado"]').value = next.value;
+    btn.closest('form').submit();
+  }
+</script>
 
 {% endblock %}
