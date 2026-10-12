@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 from unittest.mock import patch, MagicMock
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -12,8 +13,20 @@ from .models import Song, Rating, Playlist, PlaylistSong, Recording
 from .itunes import search_songs as itunes_search
 from .deezer import search_songs as deezer_search
 from .providers import search_songs as provider_search
-from .storage import get_storage
+from .storage import get_storage, LocalStorage, CloudinaryStorage
 from .views import _song_weight, _weighted_sample
+
+
+class StorageBackendTest(TestCase):
+    """La elección de backend depende del entorno (Cloudinary vs local)."""
+
+    @patch.dict(os.environ, {"CLOUDINARY_URL": "cloudinary://key:secret@cloud"}, clear=False)
+    def test_cloudinary_selected_when_env_present(self):
+        self.assertIsInstance(get_storage(), CloudinaryStorage)
+
+    def test_local_selected_when_no_env(self):
+        os.environ.pop("CLOUDINARY_URL", None)
+        self.assertIsInstance(get_storage(), LocalStorage)
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp(prefix="euphonic-tests-"))

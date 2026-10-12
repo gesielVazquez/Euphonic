@@ -14,5 +14,5 @@ graphify-out/
 package-lock.json
 session-*.md
 
-# Almacenamiento local de grabaciones (en producción viven en B2)
+# Almacenamiento local de grabaciones (en producción viven en Cloudinary)
 media/

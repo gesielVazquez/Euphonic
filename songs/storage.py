@@ -1,16 +1,18 @@
 """Almacenamiento de grabaciones de audio.
 
 En desarrollo y tests se usa el sistema de archivos local (media/recordings/).
-En producción, si están definidas B2_KEY_ID, B2_APPLICATION_KEY y B2_BUCKET,
-se usa un bucket privado de Backblaze B2 (los archivos no viven en Render).
+En producción, si está definida la variable CLOUDINARY_URL, se usa Cloudinary
+(los archivos no viven en Render). El assets se sube como tipo "authenticated"
+(privado) y solo se sirve con URLs firmadas generadas por la app con login.
 
 La interfaz es la misma para ambos backends:
 solo save / read / delete usando la "storage_key" que guarda la base de datos.
 """
 
-import io
 import os
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from django.conf import settings
@@ -70,57 +72,66 @@ class LocalStorage(RecordingsStorage):
         self._path(key).unlink(missing_ok=True)
 
 
-class B2Storage(RecordingsStorage):
-    """Almacena en un bucket privado de Backblaze B2 (producción)."""
+class CloudinaryStorage(RecordingsStorage):
+    """Almacena en Cloudinary con entrega privada (type=authenticated).
 
-    def __init__(self, key_id=None, application_key=None, bucket=None):
-        self.key_id = _env("B2_KEY_ID") or key_id
-        self.application_key = _env("B2_APPLICATION_KEY") or application_key
-        self.bucket_name = _env("B2_BUCKET") or bucket
-        if not (self.key_id and self.application_key and self.bucket_name):
+    Los assets se suben como raw (sin transcodeo → no consume créditos de
+    procesamiento) y las URLs de descarga se firman por request (sign_url=True).
+    """
+
+    def __init__(self):
+        from cloudinary import api, config, uploader, utils
+        config(secure=True)
+        cfg = config()
+        if not (cfg.cloud_name and cfg.api_key and cfg.api_secret):
             raise ImproperlyConfigured(
-                "Faltan variables B2_KEY_ID, B2_APPLICATION_KEY o B2_BUCKET "
-                "para usar el almacenamiento en Backblaze B2."
+                "La variable CLOUDINARY_URL es necesaria para el almacenamiento "
+                "en Cloudinary (ej: cloudinary://KEY:SECRET@CLOUD_NAME)."
             )
-        from b2sdk.v2 import InMemoryAccountInfo, B2Api
-        info = InMemoryAccountInfo()
-        self.api = B2Api(info)
-        self.api.authorize_account("production", self.key_id, self.application_key)
-        self.bucket = self.api.get_bucket_by_name(self.bucket_name)
+        self._uploader = uploader
+        self._api = api
+        self._utils = utils
 
     def save(self, key, data):
         if hasattr(data, "read"):
             data = data.read()
-        if not isinstance(data, bytes):
-            data = data.encode()
-        self.bucket.upload_bytes(data, key)
+        self._uploader.upload(
+            data,
+            public_id=key,
+            resource_type="raw",
+            type="authenticated",
+            overwrite=True,
+        )
         return key
 
     def read(self, key):
         try:
-            downloaded = self.bucket.download_file_by_name(key)
-            buf = io.BytesIO()
-            downloaded.save(buf)
-            return buf.getvalue()
-        except Exception as exc:
-            if "does not exist" in str(exc).lower():
+            url = self._utils.cloudinary_url(
+                key, resource_type="raw", type="authenticated", sign_url=True
+            )[0]
+            with urllib.request.urlopen(url) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            if exc.code in (404, 400):
                 return None
             raise
 
     def delete(self, key):
         try:
-            self.bucket.delete_file_version(key)
+            self._api.delete_resources(
+                [key], resource_type="raw", type="authenticated"
+            )
         except Exception:
             pass
 
 
 def get_storage():
     """Devuelve el backend adecuado según el entorno."""
-    if _env("B2_BUCKET") and _env("B2_KEY_ID") and _env("B2_APPLICATION_KEY"):
-        return B2Storage()
+    if _env("CLOUDINARY_URL"):
+        return CloudinaryStorage()
     if settings.DEBUG or "test" in sys.argv:
         return LocalStorage()
     raise ImproperlyConfigured(
-        "El almacenamiento de grabaciones no está configurado. Definí las "
-        "variables B2_KEY_ID, B2_APPLICATION_KEY y B2_BUCKET en producción."
+        "El almacenamiento de grabaciones no está configurado. Definí la "
+        "variable CLOUDINARY_URL en producción."
     )

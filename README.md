@@ -21,6 +21,12 @@ programa estados de avance sobre las canciones que quiere tocar.
   - Las tarjetas llevan un borde del color del estado.
   - El dashboard muestra el conteo por estado.
 - Estadísticas: totales, mejor/peor calificadas, exportación CSV e importación.
+- **Grabaciones de sesión (v2.0):** cada canción puede tener sus grabaciones de
+  ensayo con título autocompletado, nota, y reproductor privado en la tarjeta.
+  - Almacenadas en **Cloudinary** (plan free, sin tarjeta), subidas como *raw*
+    privado (`type=authenticated`) y servidas con URLs firmadas solo con login.
+  - En desarrollo/tests se usa `media/recordings/` local; en producción es
+    obligatoria la env var `CLOUDINARY_URL`.
 
 ## Estructura
 
