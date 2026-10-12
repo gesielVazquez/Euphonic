@@ -78,11 +78,11 @@ cualquier versión si algo falla.
 
 - La producción es la versión commiteada en `main`; las ramas no se despliegan
   hasta el merge.
-- Con Render varios (Free) esto es al pie: ver [Previstas de Render](#pagina-de-carga-en-render-free).
+- Con Render Free esto es al pie: ver [página de carga en Render Free](#pagina-de-carga-en-render-free).
 
 ## Página de carga en Render Free
 
-Quando Render (plan gratuito) apaga el servicio por inactividad, al entrar muestra
+Cuando Render (plan gratuito) apaga el servicio por inactividad, al entrar muestra
 la **página de carga propia de Render** mientras el contenedor vuelve a arrancar
 ("cold start").
 
