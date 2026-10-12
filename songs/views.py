@@ -12,6 +12,7 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q, Count, Avg
+from django.views.decorators.http import require_POST
 
 from .models import Song, Rating, Playlist, PlaylistSong
 from .providers import search_songs as provider_search
@@ -96,6 +97,20 @@ def rate_song(request, pk):
                 defaults={"value": int(value)},
             )
             messages.success(request, f"Calificaste «{song.title}» con {value} estrellas.")
+    return redirect(request.META.get("HTTP_REFERER", "song_list"))
+
+
+@login_required
+@require_POST
+def update_song_state(request, pk):
+    song = get_object_or_404(Song, pk=pk)
+    estado = request.POST.get("estado")
+    if estado in dict(Song.ESTADO_CHOICES):
+        song.estado = estado
+        song.save(update_fields=["estado"])
+        messages.success(request, f"Estado de «{song.title}» actualizado.")
+    else:
+        messages.error(request, f"Estado inválido: {estado}")
     return redirect(request.META.get("HTTP_REFERER", "song_list"))
 
 

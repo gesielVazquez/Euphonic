@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     SongListView, SongCreateView, SongUpdateView, SongDeleteView,
-    rate_song, search_songs_view, generate_playlist,
+    rate_song, update_song_state, search_songs_view, generate_playlist,
     PlaylistListView, PlaylistDetailView,
     dashboard_view, export_songs_view, backfill_artwork_view, backfill_preview_view,
     export_playlist_view,
@@ -21,6 +21,7 @@ urlpatterns = [
     path("<int:pk>/editar/", SongUpdateView.as_view(), name="song_update"),
     path("<int:pk>/eliminar/", SongDeleteView.as_view(), name="song_delete"),
     path("<int:pk>/calificar/", rate_song, name="rate_song"),
+    path("<int:pk>/update-state/", update_song_state, name="update_song_state"),
     path("playlists/", PlaylistListView.as_view(), name="playlist_list"),
     path("playlists/<int:pk>/", PlaylistDetailView.as_view(), name="playlist_detail"),
     path("playlists/<int:pk>/exportar/", export_playlist_view, name="export_playlist"),
