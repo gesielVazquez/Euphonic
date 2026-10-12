@@ -128,11 +128,16 @@ const ESTADO_OPTS = [
     const cur = btn.dataset.estado || 'idea';
     const idx = ESTADO_OPTS.findIndex(e => e.value === cur);
     const next = ESTADO_OPTS[(idx + 1) % ESTADO_OPTS.length];
+    const form = btn.closest('form');
     btn.dataset.estado = next.value;
     btn.textContent = next.label;
     btn.style.background = next.bg;
-    btn.closest('form').querySelector('input[name="estado"]').value = next.value;
-    btn.closest('form').submit();
+    const card = btn.closest('.card');
+    if (card) card.style.borderColor = next.bg;
+    form.querySelector('input[name="estado"]').value = next.value;
+    fetch(form.action, { method: 'POST', body: new FormData(form) })
+      .then(res => { if (!res.ok) window.location.reload(); })
+      .catch(() => window.location.reload());
   }
 </script>
 
