@@ -3,16 +3,27 @@
 
 <div class="card" style="max-width:560px">
   {% if song %}
-    <h2 style="margin-bottom:1rem">Subir grabación</h2>
+    <h2 style="margin-bottom:1rem">Registrar grabación</h2>
     <p class="meta mb-3" style="padding:.6rem .9rem;background:var(--surface2);border-radius:8px">
       Canción: <strong>{{ song.title }}</strong> — {{ song.artist }}
     </p>
-    <form method="post" enctype="multipart/form-data">
+
+    <div class="meta mb-3" style="padding:.6rem .9rem;background:#fff7e6;border:1px solid #f5c542;border-radius:8px">
+      <strong>Cómo compartir el audio:</strong> el ensayo vive en <strong>SoundCloud</strong>.
+      <br>1️⃣ Subí la grabación ahí (podés dejarla <em>privada</em>).
+      <br>2️⃣ Toca <strong>Compartir → Secret link</strong> (o Copiar enlace).
+      <br>3️⃣ Pegá acá abajo el enlace que te dio.
+    </div>
+
+    <form method="post">
       {% csrf_token %}
       <input type="hidden" name="song" value="{{ song.pk }}">
 
-      <label>Archivo de audio (M4A, MP3, OGG, WAV…)</label>
-      <input type="file" name="audio" id="rec-audio" accept="audio/*" required>
+      <label>Fecha de la grabación (día del ensayo, no cuando se subió)</label>
+      <input type="date" name="fecha" id="rec-fecha" value="{% now 'Y-m-d' %}" required>
+
+      <label>Enlace de SoundCloud</label>
+      <input type="url" name="url" id="rec-url" placeholder="https://soundcloud.com/usuario/track-cancion" style="direction:ltr" required>
 
       <label>Título (autocompletado, podés editarlo)</label>
       <input type="text" name="title" id="rec-title">
@@ -21,13 +32,13 @@
       <textarea name="note" rows="2" placeholder="Qué chispa nos salió, qué versionamos…"></textarea>
 
       <div style="display:flex;gap:.5rem;margin-top:1.2rem">
-        <button type="submit" class="btn btn-primary">Subir grabación</button>
+        <button type="submit" class="btn btn-primary">Guardar grabación</button>
         <a href="{% url 'song_list' %}" class="btn btn-outline">Cancelar</a>
       </div>
     </form>
   {% else %}
-    <h2 style="margin-bottom:.5rem">Subir grabación</h2>
-    <p class="meta">Para subir una grabación, primero elegí la canción desde su ficha
+    <h2 style="margin-bottom:.5rem">Registrar grabación</h2>
+    <p class="meta">Para registrar una grabación, primero elegí la canción desde su ficha
       y tocá <strong>🎙 Subir grabación</strong> ahí.</p>
     <a href="{% url 'song_list' %}" class="btn btn-primary">Ir al listado de canciones</a>
   {% endif %}
@@ -35,18 +46,19 @@
 
 {% if song %}
 <script>
-  const audio = document.getElementById('rec-audio');
+  const fechaEl = document.getElementById('rec-fecha');
   const title = document.getElementById('rec-title');
   const cancion = {{ song.title|escapejs }};
   const quien = {{ user.username|escapejs }};
   function refreshTitle() {
-    const f = audio.files[0];
-    if (!f) return;
-    const today = new Date();
-    const d = today.toISOString().slice(0, 10).replace(/-/g, '/');
-    title.value = `${d}-${cancion}-${quien}`;
+    const d = fechaEl.value ? new Date(fechaEl.value + 'T00:00:00') : new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    title.value = `${y}/${m}/${dd}-${cancion}-${quien}`;
   }
-  audio.addEventListener('change', refreshTitle);
+  fechaEl.addEventListener('change', refreshTitle);
+  refreshTitle();
 </script>
 {% endif %}
 

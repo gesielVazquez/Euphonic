@@ -21,12 +21,13 @@ programa estados de avance sobre las canciones que quiere tocar.
   - Las tarjetas llevan un borde del color del estado.
   - El dashboard muestra el conteo por estado.
 - Estadísticas: totales, mejor/peor calificadas, exportación CSV e importación.
-- **Grabaciones de sesión (v2.0):** cada canción puede tener sus grabaciones de
-  ensayo con título autocompletado, nota, y reproductor privado en la tarjeta.
-  - Almacenadas en **Cloudinary** (plan free, sin tarjeta), subidas como *raw*
-    privado (`type=authenticated`) y servidas con URLs firmadas solo con login.
-  - En desarrollo/tests se usa `media/recordings/` local; en producción es
-    obligatoria la env var `CLOUDINARY_URL`.
+- **Grabaciones de sesión (v2.2):** cada canción puede registrar sus grabaciones de
+  ensayo. El audio vive en **SoundCloud** (como las canciones viven en Spotify) y la
+  app guarda título + enlace + nota.
+  - Título autogenerado: `aaaa/mm/dd-NOMBRE DE LA CANCION-NOMBRE DEL USUARIO`, con la
+    fecha del día de la grabación (no la de subida).
+  - Se comparte el **Secret link** de SoundCloud y el botón "▶ Escuchar" lo abre.
+  - No se almacenan archivos en Euphonic ni se necesitan variables extra.
 
 ## Estructura
 
@@ -74,6 +75,9 @@ cualquier versión si algo falla.
 | `v1.0-spotify-qr` | Base estable (botón Spotify search + filtro `qr_url`) |
 | `v1.1` | Estados de canción: botón de ciclo, borde por estado, estadísticas |
 | `v1.1.1` | Cambio de estado vía AJAX (sin recargar la página) |
+| `v2.0` | Grabaciones de sesión (subida de archivos, backend Cloudinary) |
+| `v2.1` | Grabaciones: botón ▶ Escuchar directo al CDN, sin combo de canciones |
+| `v2.2` | Grabaciones en SoundCloud (enlace + fecha), se quita Cloudinary |
 
 **Para volver a una versión buena si algo sale mal:**
 - Antes de mergear: descartar la rama, `main` queda intacto.
