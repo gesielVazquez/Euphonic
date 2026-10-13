@@ -87,9 +87,9 @@
               <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.35rem">
                 <span class="meta" style="flex:1;min-width:140px">
                   {{ rec.title }}
-                  <span style="opacity:.6">({{ rec.size_label }} · {{ rec.uploaded_by.username }})</span>
+                  <span style="opacity:.6">({{ rec.uploaded_by.username }})</span>
                 </span>
-                <a href="{{ rec.play_url }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">▶ Escuchar</a>
+                <a href="{{ rec.url }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">▶ Escuchar</a>
                 {% if rec.uploaded_by_id == user.id or user.is_superuser %}
                   <form method="post" action="{% url 'recording_delete' rec.pk %}" class="inline-form">
                     {% csrf_token %}
@@ -99,6 +99,7 @@
                 {% endif %}
               </div>
             {% endfor %}
+            <div class="meta" style="opacity:.7;font-size:.8rem">El audio suena en SoundCloud, como las canciones suenan en Spotify.</div>
           </div>
         {% endif %}
 

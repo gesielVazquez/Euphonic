@@ -48,6 +48,12 @@ Euphonic/
 ### PlaylistSong
 - `playlist` (FK), `song` (FK), `order`
 
+### Recording
+- `song` (FK), `title`, `url` (enlace de escucha en SoundCloud)
+- `uploaded_by` (FK User), `note`, `created_at`
+- El audio vive en SoundCloud (como las canciones en Spotify); Euphonic no guarda archivos.
+- Título autogenerado: `aaaa/mm/dd-NOMBRE DE LA CANCION-NOMBRE DEL USUARIO` usando la fecha de la grabación.
+
 ## URLs principales
 | Ruta | Vista |
 |------|-------|
@@ -65,7 +71,18 @@ Euphonic/
 | `/playlists/<pk>/eliminar/` | Eliminar playlist (POST con confirmación) |
 | `/accounts/login/` | Login |
 | `/accounts/logout/` | Logout (POST) |
+| `/grabaciones/subir/` | Registrar grabación (enlace SoundCloud + fecha; requiere `?song=pk`) |
+| `/grabaciones/<pk>/eliminar/` | Eliminar grabación (POST, solo dueño/superuser) |
 | `/admin/` | Django Admin |
+
+## Grabaciones (SoundCloud)
+- El audio se sube a SoundCloud (privado + "Secret link") y la app guarda el enlace.
+- Título autogenerado: `aaaa/mm/dd-NOMBRE DE LA CANCION-NOMBRE DEL USUARIO` con la
+  fecha del ensayo (campo `fecha` en el form, por defecto hoy), no la de subida.
+- Botón "▶ Escuchar" en la tarjeta abre el enlace en pestaña nueva (como Spotify).
+- `Recording.url` es obligatorio al registrar; `models.Song` sin cambios.
+- En v2.0/v2.1 se subía el archivo (Cloudinary); desde v2.2 solo se guarda el enlace:
+  `songs/storage.py` fue eliminado y no hay env var `CLOUDINARY_URL`.
 
 ## Playlist — Algoritmo
 - Filtro progresivo: excluye canciones con `last_played_at` < 15 días; si < 8 candidatos, relaja día a día hasta tener suficientes

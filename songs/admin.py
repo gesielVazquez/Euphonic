@@ -15,7 +15,7 @@ class PlaylistSongInline(admin.TabularInline):
 class RecordingInline(admin.TabularInline):
     model = Recording
     extra = 0
-    readonly_fields = ["storage_key", "file_size", "uploaded_by", "created_at"]
+    readonly_fields = ["uploaded_by", "created_at"]
 
 
 class SongAdmin(admin.ModelAdmin):
@@ -35,10 +35,10 @@ class PlaylistAdmin(admin.ModelAdmin):
 
 
 class RecordingAdmin(admin.ModelAdmin):
-    list_display = ["title", "song", "uploaded_by", "file_size", "created_at"]
+    list_display = ["title", "song", "uploaded_by", "url", "created_at"]
     list_filter = ["song", "uploaded_by"]
-    search_fields = ["title", "note"]
-    readonly_fields = ["storage_key", "file_size", "uploaded_by", "created_at"]
+    search_fields = ["title", "note", "url"]
+    readonly_fields = ["uploaded_by", "created_at"]
 
 
 admin.site.register(Song, SongAdmin)

@@ -1,42 +1,19 @@
 import json
-import os
-import tempfile
 from unittest.mock import patch, MagicMock
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, Client, override_settings
+from django.test import TestCase, Client
 
 from django.urls import reverse
 from django.contrib.auth.models import User
-from django.utils import timezone
 
 from .models import Song, Rating, Playlist, PlaylistSong, Recording
 from .itunes import search_songs as itunes_search
 from .deezer import search_songs as deezer_search
 from .providers import search_songs as provider_search
-from .storage import get_storage, LocalStorage, CloudinaryStorage
 from .views import _song_weight, _weighted_sample
 
 
-class StorageBackendTest(TestCase):
-    """La elección de backend depende del entorno (Cloudinary vs local)."""
-
-    @patch.dict(os.environ, {"CLOUDINARY_URL": "cloudinary://key:secret@cloud"}, clear=False)
-    def test_cloudinary_selected_when_env_present(self):
-        self.assertIsInstance(get_storage(), CloudinaryStorage)
-
-    @patch.dict(os.environ, {"CLOUDINARY_URL": "cloudinary://key:secret@cloud"}, clear=False)
-    def test_cloudinary_play_url_is_signed(self):
-        url = CloudinaryStorage().play_url("recordings/2026/a.m4a")
-        self.assertIn("s--", url)
-
-    def test_local_selected_when_no_env(self):
-        os.environ.pop("CLOUDINARY_URL", None)
-        self.assertIsInstance(get_storage(), LocalStorage)
-
-
-@override_settings(MEDIA_ROOT=tempfile.mkdtemp(prefix="euphonic-tests-"))
 class RecordingTest(TestCase):
-    """Subir / escuchar / eliminar grabaciones (storage local en tests)."""
+    """Registrar / escuchar (enlace SoundCloud) / eliminar grabaciones."""
 
     def setUp(self):
         self.user = User.objects.create_user("testuser", password="pass123")
@@ -47,82 +24,57 @@ class RecordingTest(TestCase):
         self.client = Client()
         self.client.login(username="testuser", password="pass123")
 
-    def _audio(self, name="test.m4a", content=b"audio-bytes"):
-        return SimpleUploadedFile(name, content, content_type="audio/mp4")
-
-    def test_upload_recording(self):
-        resp = self.client.post(reverse("recording_upload"), {
+    def _post(self, **overrides):
+        data = {
             "song": self.song.pk,
-            "audio": self._audio(),
-        })
+            "fecha": "2026-10-13",
+            "url": "https://soundcloud.com/usuario/test-secret-link",
+            "title": "",
+            "note": "",
+        }
+        data.update(overrides)
+        return self.client.post(reverse("recording_upload"), data)
+
+    def test_add_recording_with_link(self):
+        resp = self._post()
         self.assertRedirects(resp, reverse("song_list"))
         rec = Recording.objects.get(song=self.song)
         self.assertEqual(rec.uploaded_by, self.user)
+        self.assertEqual(rec.url, "https://soundcloud.com/usuario/test-secret-link")
         self.assertRegex(rec.title, r"^\d{4}/\d{2}/\d{2}-Test-testuser$")
-        self.assertEqual(rec.file_size, len(b"audio-bytes"))
-        self.assertTrue(rec.storage_key.startswith("recordings/"))
 
-    def test_upload_recording_custom_title(self):
-        self.client.post(reverse("recording_upload"), {
-            "song": self.song.pk,
-            "audio": self._audio(),
-            "title": "La chispa del martes",
-        })
+    def test_add_recording_custom_title(self):
+        self._post(title="La chispa del martes")
         rec = Recording.objects.get(song=self.song)
         self.assertEqual(rec.title, "La chispa del martes")
 
-    def test_upload_rejects_unknown_extension(self):
-        resp = self.client.post(reverse("recording_upload"), {
-            "song": self.song.pk,
-            "audio": self._audio("malware.exe", b"x"),
-        })
+    def test_upload_rejects_missing_url(self):
+        resp = self._post(url="")
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Recording.objects.exists())
+
+    def test_upload_rejects_non_http_url(self):
+        resp = self._post(url="no-es-un-enlace")
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Recording.objects.exists())
+
+    def test_upload_rejects_invalid_date(self):
+        resp = self._post(fecha="no-es-una-fecha")
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(Recording.objects.exists())
 
     def test_upload_requires_login(self):
         self.client.logout()
-        resp = self.client.post(reverse("recording_upload"), {
-            "song": self.song.pk,
-            "audio": self._audio(),
-        })
+        resp = self._post()
         self.assertEqual(resp.status_code, 302)
         self.assertIn("/accounts/login/", resp.url)
         self.assertFalse(Recording.objects.exists())
 
-    def test_stream_recording_requires_login(self):
-        rec = Recording.objects.create(
-            song=self.song, title="T", storage_key="recordings/2026/x.m4a",
-            file_size=11, uploaded_by=self.user,
-        )
-        self.client.logout()
-        resp = self.client.get(reverse("recording_stream", args=[rec.pk]))
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn("/accounts/login/", resp.url)
-
-    def test_stream_recording_returns_audio(self):
-        storage = get_storage()
-        storage.save("recordings/2026/test.m4a", b"prueba")
-        rec = Recording.objects.create(
-            song=self.song, title="T", storage_key="recordings/2026/test.m4a",
-            file_size=6, uploaded_by=self.user,
-        )
-        resp = self.client.get(reverse("recording_stream", args=[rec.pk]))
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.content, b"prueba")
-        self.assertEqual(resp["Content-Type"], "audio/mp4")
-
-    def test_stream_missing_file_returns_404(self):
-        rec = Recording.objects.create(
-            song=self.song, title="T", storage_key="recordings/2026/inexistente.m4a",
-            file_size=6, uploaded_by=self.user,
-        )
-        resp = self.client.get(reverse("recording_stream", args=[rec.pk]))
-        self.assertEqual(resp.status_code, 404)
-
     def test_delete_requires_owner_or_superuser(self):
         rec = Recording.objects.create(
-            song=self.song, title="T", storage_key="recordings/2026/del.m4a",
-            file_size=11, uploaded_by=self.user,
+            song=self.song, title="T",
+            url="https://soundcloud.com/usuario/x",
+            uploaded_by=self.user,
         )
         self.client.login(username="other", password="pass123")
         self.client.post(reverse("recording_delete", args=[rec.pk]))
@@ -137,21 +89,22 @@ class RecordingTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "primero elegí la canción")
 
-    def test_play_url_falls_back_to_stream_in_local(self):
-        rec = Recording.objects.create(
-            song=self.song, title="T", storage_key="recordings/2026/test.m4a",
-            file_size=11, uploaded_by=self.user,
-        )
-        self.assertEqual(rec.play_url, reverse("recording_stream", args=[rec.pk]))
-
-    def test_song_list_shows_recordings(self):
+    def test_song_list_shows_recordings_with_link(self):
         Recording.objects.create(
-            song=self.song, title="Mi grabación", storage_key="recordings/2026/test.m4a",
-            file_size=11, uploaded_by=self.user,
+            song=self.song, title="Mi grabación",
+            url="https://soundcloud.com/usuario/secret",
+            uploaded_by=self.user,
         )
         resp = self.client.get(reverse("song_list"))
         self.assertContains(resp, "Mi grabación")
         self.assertContains(resp, "🎙 Grabaciones")
+        self.assertContains(resp, "https://soundcloud.com/usuario/secret")
+
+    def test_upload_form_has_soundcloud_help(self):
+        resp = self.client.get(reverse("recording_upload"), {"song": self.song.pk})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "SoundCloud")
+        self.assertContains(resp, "Secret link")
 
     def test_song_list_upload_button(self):
         resp = self.client.get(reverse("song_list"))

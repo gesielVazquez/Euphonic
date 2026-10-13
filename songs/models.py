@@ -4,9 +4,7 @@ import uuid
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.urls import reverse
 
-from .storage import get_storage
 
 
 class Song(models.Model):
@@ -107,10 +105,10 @@ class Recording(models.Model):
         verbose_name="canción",
     )
     title = models.CharField(max_length=200, verbose_name="título")
-    storage_key = models.CharField(
-        max_length=500, editable=False, verbose_name="clave de almacenamiento",
+    url = models.URLField(
+        max_length=500, default="", blank=True,
+        verbose_name="enlace de escucha (SoundCloud)",
     )
-    file_size = models.PositiveIntegerField(default=0, verbose_name="tamaño (bytes)")
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="subida por",
     )
@@ -121,20 +119,6 @@ class Recording(models.Model):
         verbose_name = "grabación"
         verbose_name_plural = "grabaciones"
         ordering = ["-created_at"]
-
-    @property
-    def size_label(self):
-        kb = self.file_size / 1024
-        if kb < 1024:
-            return f"{kb:.0f} KB"
-        return f"{kb / 1024:.1f} MB"
-
-    @property
-    def play_url(self):
-        """URL para escuchar: firmada de Cloudinary (CDN) o proxy interno en local."""
-        return get_storage().play_url(self.storage_key) or reverse(
-            "recording_stream", args=[self.pk]
-        )
 
     def __str__(self):
         return f"{self.title} · {self.song.title}"
