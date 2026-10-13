@@ -25,7 +25,7 @@ def _env(name):
 
 
 class RecordingsStorage:
-    """Interfaz base: save / read / delete por storage_key."""
+    """Interfaz base: save / read / delete / play_url por storage_key."""
 
     def save(self, key, data):
         raise NotImplementedError
@@ -35,6 +35,10 @@ class RecordingsStorage:
 
     def delete(self, key):
         raise NotImplementedError
+
+    def play_url(self, key):
+        # None = no hay URL directa (p.ej. storage local usa el proxy interno)
+        return None
 
 
 class LocalStorage(RecordingsStorage):
@@ -123,6 +127,20 @@ class CloudinaryStorage(RecordingsStorage):
             )
         except Exception:
             pass
+
+    def play_url(self, key):
+        """URL firmada para reproducir directo desde el CDN (sin pasar por Django).
+
+        El link firma el acceso al archivo privado (type=authenticated) pero no
+        tiene caducidad propia: es como un "link privado". Al eliminar la
+        grabación se borra del listado y ya no se muestra.
+        """
+        return self._utils.cloudinary_url(
+            key,
+            resource_type="raw",
+            type="authenticated",
+            sign_url=True,
+        )[0]
 
 
 def get_storage():
