@@ -165,7 +165,7 @@ def recording_upload_view(request):
                     key = f"recordings/{now:%Y/%m}/{now:%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:8]}{ext}"
                     storage.save(key, audio)
                     if not title:
-                        title = f"{now:%d/%m/%Y} — {song.title} (sesión)"
+                        title = f"{now:%Y/%m/%d}-{song.title}-{request.user.username}"
                     rec = Recording.objects.create(
                         song=song,
                         title=title,
@@ -181,10 +181,7 @@ def recording_upload_view(request):
                 except Exception:
                     messages.error(request, "No se pudo subir la grabación. Revisá el archivo e intentá de nuevo.")
 
-    return render(request, "songs/recording_form.html", {
-        "song": requested_song,
-        "songs": Song.objects.all(),
-    })
+    return render(request, "songs/recording_form.html", {"song": requested_song})
 
 
 @login_required

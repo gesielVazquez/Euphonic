@@ -24,6 +24,11 @@ class StorageBackendTest(TestCase):
     def test_cloudinary_selected_when_env_present(self):
         self.assertIsInstance(get_storage(), CloudinaryStorage)
 
+    @patch.dict(os.environ, {"CLOUDINARY_URL": "cloudinary://key:secret@cloud"}, clear=False)
+    def test_cloudinary_play_url_is_signed(self):
+        url = CloudinaryStorage().play_url("recordings/2026/a.m4a")
+        self.assertIn("s--", url)
+
     def test_local_selected_when_no_env(self):
         os.environ.pop("CLOUDINARY_URL", None)
         self.assertIsInstance(get_storage(), LocalStorage)
@@ -53,7 +58,7 @@ class RecordingTest(TestCase):
         self.assertRedirects(resp, reverse("song_list"))
         rec = Recording.objects.get(song=self.song)
         self.assertEqual(rec.uploaded_by, self.user)
-        self.assertIn("sesión", rec.title)
+        self.assertRegex(rec.title, r"^\d{4}/\d{2}/\d{2}-Test-testuser$")
         self.assertEqual(rec.file_size, len(b"audio-bytes"))
         self.assertTrue(rec.storage_key.startswith("recordings/"))
 
@@ -126,6 +131,18 @@ class RecordingTest(TestCase):
         self.client.login(username="testuser", password="pass123")
         self.client.post(reverse("recording_delete", args=[rec.pk]))
         self.assertFalse(Recording.objects.filter(pk=rec.pk).exists())
+
+    def test_upload_form_without_song_shows_guidance(self):
+        resp = self.client.get(reverse("recording_upload"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "primero elegí la canción")
+
+    def test_play_url_falls_back_to_stream_in_local(self):
+        rec = Recording.objects.create(
+            song=self.song, title="T", storage_key="recordings/2026/test.m4a",
+            file_size=11, uploaded_by=self.user,
+        )
+        self.assertEqual(rec.play_url, reverse("recording_stream", args=[rec.pk]))
 
     def test_song_list_shows_recordings(self):
         Recording.objects.create(
