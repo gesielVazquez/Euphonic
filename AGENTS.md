@@ -119,6 +119,19 @@ Euphonic/
   Ojo: cambiar `ADMIN_USERNAME` en las env vars NO renombra, crea un admin nuevo
   y deja el anterior activo como superusuario.
 
+## Seguridad (secretos)
+- **Nunca** commitear `.env`: está en `.gitignore`; los secretos reales viven en
+  las env vars de Render. En el repo solo va `.env.example` con valores **vacíos**.
+- **GitHub Secret scanning + Push protection** activados en el repo (bloquean
+  pushes con secretos antes de que toquen el historial).
+- **gitleaks vía pre-commit** local: cada commit escanea los archivos staged
+  contra cientos de patrones de secretos y **frena el commit** si detecta algo.
+  - Instalar una sola vez: `.venv/bin/pip install pre-commit && .venv/bin/pre-commit install`
+  - Correr a mano sobre todo el repo: `.venv/bin/pre-commit run --all-files`
+  - Config: `.pre-commit-config.yaml` (hook `gitleaks`, no commitear `.venv`).
+- Si un secreto se expone igual: **rotar primero** (regenerar la key/env var en la
+  plataforma), después purgar historial. Borrar el archivo no deshace el leak.
+
 ## Usuarios
 - `manage.py setup_users` crea el admin (`ADMIN_*`, superusuario) y todos los
   `USER{n}_USERNAME`/`USER{n}_PASSWORD` que encuentre en el entorno. Es
