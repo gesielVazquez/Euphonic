@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="card" style="max-width:560px">
+<div class="card card-form">
   <h2 style="margin-bottom:1rem">📐 {% if tab %}Editar{% else %}Registrar{% endif %} tablatura</h2>
   <p class="meta mb-3" style="padding:.6rem .9rem;background:var(--surface2);border-radius:8px">
     Canción: <strong>{{ song.title }}</strong> — {{ song.artist }}
@@ -21,8 +21,8 @@
     <label>Etiqueta (opcional)</label>
     <input type="text" name="label" value="{{ tab.label|default:'' }}" maxlength="50" placeholder="Riffs, Acordes rítmicos…">
 
-    <label style="display:flex;align-items:center;gap:.5rem;font-weight:400">
-      <input type="checkbox" name="is_shared" {% if tab.is_shared %}checked{% endif %}>
+    <label for="tab-is-shared" class="check-row">
+      <input type="checkbox" name="is_shared" id="tab-is-shared" {% if tab.is_shared %}checked{% endif %}>
       Compartirla con el resto de la banda
     </label>
 
