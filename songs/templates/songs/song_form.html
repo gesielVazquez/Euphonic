@@ -24,4 +24,43 @@
   </form>
 </div>
 
+{% if object %}
+<div class="card" style="max-width:560px;margin-top:1rem">
+  <h3 style="margin-bottom:.75rem">📐 Mi tablatura</h3>
+  {% if my_tab %}
+    <p class="meta mb-3" style="padding:.6rem .9rem;background:var(--surface2);border-radius:8px">
+      Guardada{% if my_tab.label %} como «{{ my_tab.label }}»{% endif %} ·
+      {% if my_tab.is_shared %}compartida con la banda{% else %}solo la ves vos{% endif %}
+    </p>
+  {% endif %}
+  <form method="post" action="{% url 'tab_save' object.pk %}">
+    {% csrf_token %}
+    <label>Enlace de la tablatura</label>
+    <input type="url" name="url" value="{{ my_tab.url|default:'' }}" placeholder="https://…" style="direction:ltr" required>
+
+    <label>Etiqueta (opcional)</label>
+    <input type="text" name="label" value="{{ my_tab.label|default:'' }}" maxlength="50" placeholder="Riffs, Acordes rítmicos…">
+
+    <label style="display:flex;align-items:center;gap:.5rem;font-weight:400">
+      <input type="checkbox" name="is_shared" {% if my_tab.is_shared %}checked{% endif %}>
+      Compartirla con el resto de la banda
+    </label>
+
+    <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap;align-items:center">
+      <button type="submit" class="btn btn-primary">Guardar tablatura</button>
+      {% if my_tab %}
+        <a href="{{ my_tab.url }}" target="_blank" class="btn btn-outline">Probar enlace</a>
+      {% endif %}
+    </div>
+  </form>
+  {% if my_tab %}
+    <form method="post" action="{% url 'tab_delete' my_tab.pk %}" style="margin-top:.75rem">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger btn-sm"
+              onclick="return confirm('¿Eliminar tu tablatura?')">✕ Eliminar mi tablatura</button>
+    </form>
+  {% endif %}
+</div>
+{% endif %}
+
 {% endblock %}

@@ -8,6 +8,7 @@ from .views import (
     delete_playlist_view, generate_weekly_playlist_view, import_csv_view,
     public_playlist_view, toggle_playlist_visibility_view,
     recording_upload_view, recording_delete_view,
+    tab_save_view, tab_delete_view,
 )
 
 urlpatterns = [
@@ -33,4 +34,6 @@ urlpatterns = [
     path("publico/<str:token>/", public_playlist_view, name="public_playlist"),
     path("grabaciones/subir/", recording_upload_view, name="recording_upload"),
     path("grabaciones/<int:pk>/eliminar/", recording_delete_view, name="recording_delete"),
+    path("<int:pk>/tablatura/", tab_save_view, name="tab_save"),
+    path("tablaturas/<int:pk>/eliminar/", tab_delete_view, name="tab_delete"),
 ]

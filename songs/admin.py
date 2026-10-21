@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Song, Rating, Playlist, PlaylistSong, Recording
+from .models import Song, Rating, Playlist, PlaylistSong, Recording, Tablature
 
 
 class RatingInline(admin.TabularInline):
@@ -18,11 +18,17 @@ class RecordingInline(admin.TabularInline):
     readonly_fields = ["uploaded_by", "created_at"]
 
 
+class TablatureInline(admin.TabularInline):
+    model = Tablature
+    extra = 0
+    readonly_fields = ["user", "created_at", "updated_at"]
+
+
 class SongAdmin(admin.ModelAdmin):
     list_display = ["title", "artist", "genre", "average_rating", "created_by", "last_played_at", "artwork_url"]
     list_filter = ["genre", "created_by"]
     search_fields = ["title", "artist"]
-    inlines = [RatingInline, RecordingInline]
+    inlines = [RatingInline, RecordingInline, TablatureInline]
 
 
 class PlaylistAdmin(admin.ModelAdmin):
@@ -41,8 +47,16 @@ class RecordingAdmin(admin.ModelAdmin):
     readonly_fields = ["uploaded_by", "created_at"]
 
 
+class TablatureAdmin(admin.ModelAdmin):
+    list_display = ["song", "user", "label", "is_shared", "updated_at"]
+    list_filter = ["is_shared", "user"]
+    search_fields = ["url", "label", "song__title", "song__artist"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
 admin.site.register(Song, SongAdmin)
 admin.site.register(Rating)
 admin.site.register(Playlist, PlaylistAdmin)
 admin.site.register(PlaylistSong)
 admin.site.register(Recording, RecordingAdmin)
+admin.site.register(Tablature, TablatureAdmin)

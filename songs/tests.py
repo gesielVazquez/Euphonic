@@ -1,11 +1,12 @@
 import json
 from unittest.mock import patch, MagicMock
 from django.test import TestCase, Client
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from django.urls import reverse
 from django.contrib.auth.models import User
 
-from .models import Song, Rating, Playlist, PlaylistSong, Recording
+from .models import Song, Rating, Playlist, PlaylistSong, Recording, Tablature
 from .itunes import search_songs as itunes_search
 from .deezer import search_songs as deezer_search
 from .providers import search_songs as provider_search
@@ -452,6 +453,191 @@ class SongOwnershipTest(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.song.refresh_from_db()
         self.assertEqual(self.song.title, "Test editado")
+
+
+class TablatureTest(TestCase):
+    """Tablaturas por usuario: una por canción, con opción de compartir."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("testuser", password="pass123")
+        self.other = User.objects.create_user("other", password="pass123")
+        self.admin = User.objects.create_superuser("boss", "boss@euphonic.app", "pass123")
+        self.song = Song.objects.create(
+            title="Test", artist="Artist", genre="Rock", created_by=self.user,
+        )
+        self.client = Client()
+        self.client.login(username="testuser", password="pass123")
+
+    def _post(self, **overrides):
+        data = {
+            "url": "https://tabs.example.com/riffs",
+            "label": "Riffs",
+            "is_shared": "",
+        }
+        data.update(overrides)
+        return self.client.post(reverse("tab_save", args=[self.song.pk]), data)
+
+    def test_add_tab(self):
+        resp = self._post()
+        tab = Tablature.objects.get(song=self.song, user=self.user)
+        self.assertEqual(tab.url, "https://tabs.example.com/riffs")
+        self.assertEqual(tab.label, "Riffs")
+        self.assertFalse(tab.is_shared)
+        self.assertEqual(resp.status_code, 302)
+
+    def test_add_tab_shared(self):
+        self._post(is_shared="on")
+        tab = Tablature.objects.get(song=self.song, user=self.user)
+        self.assertTrue(tab.is_shared)
+
+    def test_update_own_tab_does_not_duplicate(self):
+        self._post()
+        self._post(url="https://tabs.example.com/acordes", label="Acordes")
+        self.assertEqual(Tablature.objects.filter(song=self.song, user=self.user).count(), 1)
+        tab = Tablature.objects.get(song=self.song, user=self.user)
+        self.assertEqual(tab.url, "https://tabs.example.com/acordes")
+        self.assertEqual(tab.label, "Acordes")
+
+    def test_unique_together_song_user(self):
+        Tablature.objects.create(song=self.song, user=self.user, url="https://a.com/x")
+        with self.assertRaises(Exception):
+            Tablature.objects.create(song=self.song, user=self.user, url="https://a.com/y")
+
+    def test_post_rejects_missing_url(self):
+        resp = self._post(url="")
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Tablature.objects.exists())
+
+    def test_post_rejects_non_http_url(self):
+        resp = self._post(url="no-es-un-enlace")
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Tablature.objects.exists())
+
+    def test_post_rejects_too_long_url(self):
+        resp = self._post(url="https://a.com/" + "x" * 500)
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Tablature.objects.exists())
+
+    def test_save_requires_login(self):
+        self.client.logout()
+        resp = self._post()
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/accounts/login/", resp.url)
+
+    def test_song_list_shows_my_tab(self):
+        self._post()
+        resp = self.client.get(reverse("song_list"))
+        self.assertContains(resp, "Mi tab")
+        self.assertContains(resp, "https://tabs.example.com/riffs")
+        self.assertContains(resp, "Riffs")
+
+    def test_song_list_hides_other_private_tab(self):
+        Tablature.objects.create(
+            song=self.song, user=self.other,
+            url="https://tabs.example.com/privada", label="Secreta",
+        )
+        resp = self.client.get(reverse("song_list"))
+        self.assertNotContains(resp, "https://tabs.example.com/privada")
+        self.assertNotContains(resp, "Secreta")
+
+    def test_song_list_shows_shared_tab_of_other(self):
+        Tablature.objects.create(
+            song=self.song, user=self.other,
+            url="https://tabs.example.com/compartida", label="Riffs",
+            is_shared=True,
+        )
+        resp = self.client.get(reverse("song_list"))
+        self.assertContains(resp, "https://tabs.example.com/compartida")
+        self.assertContains(resp, "Tab (other)")
+
+    def test_playlist_detail_shows_visible_tabs(self):
+        self._post()
+        Tablature.objects.create(
+            song=self.song, user=self.other,
+            url="https://tabs.example.com/privada-otro", is_shared=False,
+        )
+        playlist = Playlist.objects.create(created_by=self.user)
+        PlaylistSong.objects.create(playlist=playlist, song=self.song, order=1)
+        resp = self.client.get(reverse("playlist_detail", args=[playlist.pk]))
+        self.assertContains(resp, "https://tabs.example.com/riffs")
+        self.assertNotContains(resp, "https://tabs.example.com/privada-otro")
+
+    def test_delete_requires_owner_or_superuser(self):
+        self._post()
+        tab = Tablature.objects.get(song=self.song, user=self.user)
+        self.client.login(username="other", password="pass123")
+        self.client.post(reverse("tab_delete", args=[tab.pk]))
+        self.assertTrue(Tablature.objects.filter(pk=tab.pk).exists())
+
+        self.client.login(username="boss", password="pass123")
+        self.client.post(reverse("tab_delete", args=[tab.pk]))
+        self.assertFalse(Tablature.objects.filter(pk=tab.pk).exists())
+
+    def test_owner_can_delete_own_tab(self):
+        self._post()
+        tab = Tablature.objects.get(song=self.song, user=self.user)
+        self.client.post(reverse("tab_delete", args=[tab.pk]))
+        self.assertFalse(Tablature.objects.filter(pk=tab.pk).exists())
+
+    def test_delete_requires_post(self):
+        self._post()
+        tab = Tablature.objects.get(song=self.song, user=self.user)
+        resp = self.client.get(reverse("tab_delete", args=[tab.pk]))
+        self.assertEqual(resp.status_code, 405)
+        self.assertTrue(Tablature.objects.filter(pk=tab.pk).exists())
+
+    def test_edit_song_form_has_tab_section(self):
+        self._post()
+        resp = self.client.get(reverse("song_update", args=[self.song.pk]))
+        self.assertContains(resp, "Mi tablatura")
+        self.assertContains(resp, "https://tabs.example.com/riffs")
+        self.assertNotContains(resp, 'name="tab_url"')
+
+    def test_song_create_form_has_no_tab_url_field(self):
+        resp = self.client.get(reverse("song_create"))
+        self.assertNotContains(resp, 'name="tab_url"')
+
+    def test_tab_form_get_prefills_my_tab(self):
+        self._post()
+        resp = self.client.get(reverse("tab_save", args=[self.song.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "https://tabs.example.com/riffs")
+        self.assertContains(resp, "Compartirla con el resto de la banda")
+
+    def test_csv_export_includes_my_tab_only(self):
+        self._post()
+        Tablature.objects.create(
+            song=self.song, user=self.other,
+            url="https://tabs.example.com/otro", is_shared=True,
+        )
+        resp = self.client.get(reverse("export_songs"))
+        content = resp.content.decode()
+        self.assertIn("https://tabs.example.com/riffs", content)
+        self.assertNotIn("https://tabs.example.com/otro", content)
+
+    def test_csv_import_creates_private_tab(self):
+        csv_content = (
+            "title,artist,genre,spotify_url,tab_url,rating\n"
+            "Importada,Artista,Rock,,https://tabs.example.com/importada,\n"
+        )
+        resp = self.client.post(
+            reverse("import_csv"),
+            {"csv_file": SimpleUploadedFile(
+                "t.csv", csv_content.encode(), content_type="text/csv",
+            )},
+        )
+        self.assertEqual(resp.status_code, 302)
+        song = Song.objects.get(title="Importada")
+        tab = Tablature.objects.get(song=song)
+        self.assertEqual(tab.user, self.user)
+        self.assertEqual(tab.url, "https://tabs.example.com/importada")
+        self.assertFalse(tab.is_shared)
+
+    def test_str_includes_song_label_and_user(self):
+        tab = Tablature.objects.create(
+            song=self.song, user=self.user, url="https://a.com/x", label="Riffs",
+        )
+        self.assertEqual(str(tab), "Test · Riffs (testuser)")
 
 
 class LoginRequiredOnMutatingViewsTest(TestCase):
