@@ -57,9 +57,12 @@
           <audio id="preview-{{ entry.song.pk }}" src="{{ entry.song.preview_url }}" preload="none"></audio>
         {% endif %}
         <a href="{{ entry.song.spotify_link }}" target="_blank" class="btn btn-outline btn-sm">Spotify</a>
-        {% if entry.song.tab_url %}
-          <a href="{{ entry.song.tab_url }}" target="_blank" class="btn btn-outline btn-sm">Tablatura</a>
-        {% endif %}
+        {% for tab in tabs_by_song|dictget:entry.song.pk %}
+          <a href="{{ tab.url }}" target="_blank" class="btn btn-outline btn-sm"
+             title="Tablatura de {{ tab.user.username }}">
+            📐 {% if tab.user_id == user.id %}Mi tab{% else %}Tab ({{ tab.user.username }}){% endif %}{% if tab.label %} · {{ tab.label }}{% endif %}
+          </a>
+        {% endfor %}
       </div>
     </div>
     <div class="meta mt-3">

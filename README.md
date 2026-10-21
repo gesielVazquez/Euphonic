@@ -28,6 +28,14 @@ programa estados de avance sobre las canciones que quiere tocar.
     fecha del día de la grabación (no la de subida).
   - Se comparte el **Secret link** de SoundCloud y el botón "▶ Escuchar" lo abre.
   - No se almacenan archivos en Euphonic ni se necesitan variables extra.
+- **Tablaturas por usuario (v2.3):** cada integrante registra **su propia tablatura**
+  por canción (ej: Temo usa los riffs, Ges usa los acordes rítmicos).
+  - Cada tab lleva etiqueta libre (`Riffs`, `Acordes rítmicos`,…) y puede marcarse
+    como **compartida** para que la vea toda la banda.
+  - Solo se ven las tabs propias y las compartidas; las privadas de otros no.
+  - Se gestionan con "📐 Mi tablatura" en la tarjeta o en el formulario de edición.
+  - La migración convierte las tabs viejas (una por canción) en tabs privadas del
+    creador con etiqueta `Ritmica`.
 
 ## Estructura
 
@@ -78,6 +86,7 @@ cualquier versión si algo falla.
 | `v2.0` | Grabaciones de sesión (subida de archivos, backend Cloudinary) |
 | `v2.1` | Grabaciones: botón ▶ Escuchar directo al CDN, sin combo de canciones |
 | `v2.2` | Grabaciones en SoundCloud (enlace + fecha), se quita Cloudinary |
+| `v2.3` | Tablaturas por usuario: tabs privadas/compartidas con etiqueta |
 
 **Para volver a una versión buena si algo sale mal:**
 - Antes de mergear: descartar la rama, `main` queda intacto.

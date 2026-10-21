@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card" style="max-width:560px">
+  <h2 style="margin-bottom:1rem">📐 {% if tab %}Editar{% else %}Registrar{% endif %} tablatura</h2>
+  <p class="meta mb-3" style="padding:.6rem .9rem;background:var(--surface2);border-radius:8px">
+    Canción: <strong>{{ song.title }}</strong> — {{ song.artist }}
+  </p>
+
+  <div class="meta mb-3" style="padding:.6rem .9rem;background:#fff7e6;border:1px solid #f5c542;border-radius:8px">
+    <strong>Esta es TU tablatura.</strong> Solo vos la ves, salvo que la marques como compartida.
+    <br>Usá la etiqueta para distinguirla: <em>Riffs</em>, <em>Acordes rítmicos</em>, etc.
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <label>Enlace de la tablatura</label>
+    <input type="url" name="url" value="{{ tab.url|default:'' }}" placeholder="https://…" style="direction:ltr" required>
+
+    <label>Etiqueta (opcional)</label>
+    <input type="text" name="label" value="{{ tab.label|default:'' }}" maxlength="50" placeholder="Riffs, Acordes rítmicos…">
+
+    <label style="display:flex;align-items:center;gap:.5rem;font-weight:400">
+      <input type="checkbox" name="is_shared" {% if tab.is_shared %}checked{% endif %}>
+      Compartirla con el resto de la banda
+    </label>
+
+    <div style="display:flex;gap:.5rem;margin-top:1.2rem;flex-wrap:wrap">
+      <button type="submit" class="btn btn-primary">Guardar tablatura</button>
+      {% if tab %}
+        <a href="{{ tab.url }}" target="_blank" class="btn btn-outline">Probar enlace</a>
+      {% endif %}
+      <a href="{% url 'song_list' %}" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+
+  {% if tab %}
+    <form method="post" action="{% url 'tab_delete' tab.pk %}" style="margin-top:1rem">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger btn-sm"
+              onclick="return confirm('¿Eliminar tu tablatura de «{{ song.title }}»?')">✕ Eliminar mi tablatura</button>
+    </form>
+  {% endif %}
+</div>
+
+{% endblock %}

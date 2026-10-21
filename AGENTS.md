@@ -30,8 +30,8 @@ Euphonic/
 ## Modelos
 
 ### Song
-- `title`, `artist`, `genre`
-- `spotify_url`, `tab_url`
+- `title`, `artist`, `genre`, `estado` (idea/progreso/completo)
+- `spotify_url`, `artwork_url`, `preview_url`
 - `last_played_at` (para filtro repetición)
 - `created_by` (FK User), `created_at`, `updated_at`
 - `average_rating()` → promedio de todas las Ratings
@@ -54,6 +54,15 @@ Euphonic/
 - El audio vive en SoundCloud (como las canciones en Spotify); Euphonic no guarda archivos.
 - Título autogenerado: `aaaa/mm/dd-NOMBRE DE LA CANCION-NOMBRE DEL USUARIO` usando la fecha de la grabación.
 
+### Tablature (v2.3)
+- `song` (FK), `user` (FK), `url`, `label` (ej: Riffs, Acordes rítmicos), `is_shared`
+- `unique_together = ["song", "user"]` → una tab por usuario por canción
+- Visibilidad: cada usuario ve sus tabs + las compartidas (`is_shared=True`) de otros.
+  Las privadas de otros no se muestran.
+- Se gestionan en `/<pk>/tablatura/` (crear/editar la propia) y se eliminan por pk.
+- La migración `0013` convirtió los `Song.tab_url` viejos en tabs privadas del
+  creador con etiqueta `Ritmica`; el campo `tab_url` se eliminó de `Song`.
+
 ## URLs principales
 | Ruta | Vista |
 |------|-------|
@@ -73,6 +82,8 @@ Euphonic/
 | `/accounts/logout/` | Logout (POST) |
 | `/grabaciones/subir/` | Registrar grabación (enlace SoundCloud + fecha; requiere `?song=pk`) |
 | `/grabaciones/<pk>/eliminar/` | Eliminar grabación (POST, solo dueño/superuser) |
+| `/<pk>/tablatura/` | Crear/editar MI tablatura de la canción (GET form, POST guarda) |
+| `/tablaturas/<pk>/eliminar/` | Eliminar tablatura (POST, solo dueño/superuser) |
 | `/admin/` | Django Admin |
 
 ## Grabaciones (SoundCloud)

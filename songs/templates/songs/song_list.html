@@ -46,9 +46,12 @@
                 <audio id="preview-{{ song.pk }}" src="{{ song.preview_url }}" preload="none"></audio>
               {% endif %}
               <a href="{{ song.spotify_link }}" target="_blank" class="btn btn-outline btn-sm">Spotify</a>
-              {% if song.tab_url %}
-                <a href="{{ song.tab_url }}" target="_blank" class="btn btn-outline btn-sm">Tablatura</a>
-              {% endif %}
+              {% for tab in tabs_by_song|dictget:song.pk %}
+                <a href="{{ tab.url }}" target="_blank" class="btn btn-outline btn-sm"
+                   title="Tablatura de {{ tab.user.username }}">
+                  📐 {% if tab.user_id == user.id %}Mi tab{% else %}Tab ({{ tab.user.username }}){% endif %}{% if tab.label %} · {{ tab.label }}{% endif %}
+                </a>
+              {% endfor %}
             </div>
             <form method="post" action="{% url 'update_song_state' song.pk %}" class="inline-form">
               {% csrf_token %}
@@ -103,8 +106,9 @@
           </div>
         {% endif %}
 
-        <div class="actions mt-3" style="display:flex;gap:.5rem">
+        <div class="actions mt-3" style="display:flex;gap:.5rem;flex-wrap:wrap">
           <a href="{% url 'song_update' song.pk %}" class="btn btn-primary btn-sm">Editar</a>
+          <a href="{% url 'tab_save' song.pk %}" class="btn btn-outline btn-sm">📐 Mi tablatura</a>
           <a href="{% url 'recording_upload' %}?song={{ song.pk }}" class="btn btn-outline btn-sm">🎙 Subir grabación</a>
           {% if song.created_by_id == user.id or user.is_superuser %}
             <form method="post" action="{% url 'song_delete' song.pk %}" class="inline-form">

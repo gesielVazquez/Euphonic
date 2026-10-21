@@ -26,7 +26,6 @@ class Song(models.Model):
     )
 
     spotify_url = models.URLField(blank=True, max_length=500, verbose_name="enlace Spotify")
-    tab_url = models.URLField(blank=True, max_length=500, verbose_name="enlace tablatura")
     artwork_url = models.URLField(blank=True, max_length=500, verbose_name="portada")
     preview_url = models.URLField(blank=True, max_length=500, verbose_name="preview audio")
 
@@ -122,6 +121,35 @@ class Recording(models.Model):
 
     def __str__(self):
         return f"{self.title} · {self.song.title}"
+
+
+class Tablature(models.Model):
+    song = models.ForeignKey(
+        Song, on_delete=models.CASCADE, related_name="tabs",
+        verbose_name="canción",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="song_tabs", verbose_name="usuario",
+    )
+    url = models.URLField(max_length=500, verbose_name="enlace tablatura")
+    label = models.CharField(
+        max_length=50, blank=True, verbose_name="etiqueta",
+        help_text="Ej: Riffs, Acordes rítmicos",
+    )
+    is_shared = models.BooleanField(default=False, verbose_name="compartida")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "tablatura"
+        verbose_name_plural = "tablaturas"
+        unique_together = ["song", "user"]
+        ordering = ["label", "user__username"]
+
+    def __str__(self):
+        tag = self.label or "sin etiqueta"
+        return f"{self.song.title} · {tag} ({self.user.username})"
 
 
 class Playlist(models.Model):

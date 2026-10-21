@@ -5,6 +5,7 @@
   <h2 style="margin-bottom:1rem">Importar canciones desde CSV</h2>
   <p style="color:var(--text2);font-size:.9rem;margin-bottom:1rem">
     El CSV debe tener columnas: <code>title</code>, <code>artist</code>, <code>genre</code>, <code>spotify_url</code>, <code>tab_url</code> (solo title y artist son obligatorios).
+    La columna <code>tab_url</code> se guarda como <strong>tu tablatura privada</strong> de cada canción.
   </p>
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}

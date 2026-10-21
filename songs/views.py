@@ -14,7 +14,7 @@ from django.db import transaction
 from django.db.models import Q, Count, Avg
 from django.views.decorators.http import require_POST
 
-from .models import Song, Rating, Playlist, PlaylistSong, Recording
+from .models import Song, Rating, Playlist, PlaylistSong, Recording, Tablature
 from .providers import search_songs as provider_search
 
 MIN_SONGS_FOR_PLAYLIST = 3
@@ -23,6 +23,20 @@ MAX_REPETITION_DAYS = 15
 PLAYLIST_SIZE_RANGE = (8, 10)
 
 MAX_RECORDING_URL_LEN = 500
+MAX_TAB_URL_LEN = 500
+
+
+def _visible_tabs_by_song(user):
+    """Tabs visibles para el usuario: las suyas + las compartidas de otros."""
+    tabs = (
+        Tablature.objects.filter(Q(user=user) | Q(is_shared=True))
+        .select_related("user", "song")
+        .order_by("label", "user__username")
+    )
+    by_song = {}
+    for tab in tabs:
+        by_song.setdefault(tab.song_id, []).append(tab)
+    return by_song
 
 
 class SongListView(LoginRequiredMixin, ListView):
@@ -47,12 +61,13 @@ class SongListView(LoginRequiredMixin, ListView):
         for rec in Recording.objects.select_related("uploaded_by").order_by("-created_at"):
             recordings_by_song.setdefault(rec.song_id, []).append(rec)
         context["recordings_by_song"] = recordings_by_song
+        context["tabs_by_song"] = _visible_tabs_by_song(self.request.user)
         return context
 
 
 class SongCreateView(LoginRequiredMixin, CreateView):
     model = Song
-    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url", "preview_url"]
+    fields = ["title", "artist", "genre", "spotify_url", "artwork_url", "preview_url"]
     success_url = reverse_lazy("song_list")
 
     def get_initial(self):
@@ -75,8 +90,15 @@ class SongCreateView(LoginRequiredMixin, CreateView):
 
 class SongUpdateView(LoginRequiredMixin, UpdateView):
     model = Song
-    fields = ["title", "artist", "genre", "spotify_url", "tab_url", "artwork_url", "preview_url"]
+    fields = ["title", "artist", "genre", "spotify_url", "artwork_url", "preview_url"]
     success_url = reverse_lazy("song_list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["my_tab"] = Tablature.objects.filter(
+            song=self.object, user=self.request.user
+        ).first()
+        return context
 
 
 class SongDeleteView(LoginRequiredMixin, DeleteView):
@@ -188,6 +210,59 @@ def recording_delete_view(request, pk):
 
 
 @login_required
+def tab_save_view(request, pk):
+    """Guarda (crea o actualiza) MI tablatura para la canción dada.
+
+    Cada usuario tiene una sola tab por canción; puede etiquetarla
+    (ej: Riffs, Acordes rítmicos) y decidir si la comparte con la banda.
+    """
+    song = get_object_or_404(Song, pk=pk)
+    tab = Tablature.objects.filter(song=song, user=request.user).first()
+
+    if request.method == "POST":
+        url = (request.POST.get("url") or "").strip()
+        label = (request.POST.get("label") or "").strip()
+        is_shared = request.POST.get("is_shared") == "on"
+        if not url:
+            messages.error(request, "Tenés que pegar el enlace de la tablatura.")
+        elif not (url.startswith("http://") or url.startswith("https://")):
+            messages.error(request, "El enlace no parece válido. Debe empezar con http:// o https://")
+        elif len(url) > MAX_TAB_URL_LEN:
+            messages.error(request, "El enlace es demasiado largo (máx. 500 caracteres).")
+        else:
+            if tab:
+                tab.url = url
+                tab.label = label[:50]
+                tab.is_shared = is_shared
+                tab.save(update_fields=["url", "label", "is_shared", "updated_at"])
+                messages.success(request, f"Tablatura de «{song.title}» actualizada.")
+            else:
+                Tablature.objects.create(
+                    song=song,
+                    user=request.user,
+                    url=url,
+                    label=label[:50],
+                    is_shared=is_shared,
+                )
+                messages.success(request, f"Tablatura registrada para «{song.title}».")
+            return redirect(request.META.get("HTTP_REFERER", "song_list"))
+
+    return render(request, "songs/tab_form.html", {"song": song, "tab": tab})
+
+
+@login_required
+@require_POST
+def tab_delete_view(request, pk):
+    tab = get_object_or_404(Tablature.objects.select_related("song", "user"), pk=pk)
+    if tab.user_id != request.user.id and not request.user.is_superuser:
+        messages.error(request, "Solo quien registró la tablatura puede eliminarla.")
+        return redirect("song_list")
+    tab.delete()
+    messages.success(request, f"Tablatura «{tab.label or tab.song.title}» eliminada.")
+    return redirect(request.META.get("HTTP_REFERER", "song_list"))
+
+
+@login_required
 def search_songs_view(request):
     results = []
     query = request.GET.get("q", "")
@@ -268,6 +343,11 @@ class PlaylistListView(LoginRequiredMixin, ListView):
 class PlaylistDetailView(LoginRequiredMixin, DetailView):
     model = Playlist
     template_name = "songs/playlist_detail.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["tabs_by_song"] = _visible_tabs_by_song(self.request.user)
+        return context
 
 
 @login_required
@@ -350,16 +430,20 @@ def export_playlist_view(request, pk):
 
 @login_required
 def export_songs_view(request):
+    my_tabs = {
+        t.song_id: t for t in Tablature.objects.filter(user=request.user)
+    }
     lines = ["title,artist,genre,spotify_url,tab_url,rating"]
     for song in Song.objects.all():
         avg = song.average_rating()
         rating_str = f"{avg:.1f}" if avg else ""
+        tab = my_tabs.get(song.pk)
         lines.append(
             f"{_csv_escape(song.title)},"
             f"{_csv_escape(song.artist)},"
             f"{_csv_escape(song.genre)},"
             f"{_csv_escape(song.spotify_url)},"
-            f"{_csv_escape(song.tab_url)},"
+            f"{_csv_escape(tab.url if tab else '')},"
             f"{rating_str}"
         )
     content = "\n".join(lines) + "\n"
@@ -488,14 +572,20 @@ def import_csv_view(request):
             if Song.objects.filter(title__iexact=title, artist__iexact=artist).exists():
                 skipped += 1
                 continue
-            Song.objects.create(
+            song = Song.objects.create(
                 title=title,
                 artist=artist,
                 genre=(row.get("genre") or row.get("Genre") or "")[:100],
-                spotify_url=(row.get("spotify_url") or row.get("spotify") or row.get("Spotify") or "")[:200],
-                tab_url=(row.get("tab_url") or row.get("tab") or row.get("Tab") or "")[:200],
+                spotify_url=(row.get("spotify_url") or row.get("spotify") or row.get("Spotify") or "")[:500],
                 created_by=request.user,
             )
+            tab_url = (row.get("tab_url") or row.get("tab") or row.get("Tab") or "").strip()
+            if tab_url:
+                Tablature.objects.create(
+                    song=song,
+                    user=request.user,
+                    url=tab_url[:MAX_TAB_URL_LEN],
+                )
             created += 1
 
         messages.success(request, f"Importadas {created} canciones. {skipped} omitidas (duplicadas o inválidas).")
