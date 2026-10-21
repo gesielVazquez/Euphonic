@@ -173,6 +173,37 @@
     form .btn { margin-top: 1.2rem; }
     .form-error { color: #f87171; font-size: .8rem; margin-top: .25rem; }
 
+    /* Checkboxes / radios no se estiran como los inputs de texto */
+    form input[type="checkbox"],
+    form input[type="radio"] {
+      width: auto;
+      margin-top: 0;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    /* Fila compacta de checkbox con su texto */
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-top: 1.1rem;
+      padding: .65rem .85rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 400;
+      color: var(--text);
+      width: fit-content;
+      max-width: 100%;
+    }
+    .check-row:hover { border-color: var(--primary); }
+    .check-row input { flex-shrink: 0; transform: scale(1.15); }
+
+    /* Formularios centrados y adaptables */
+    .card-form { max-width: 560px; margin-left: auto; margin-right: auto; }
+
     /* ── SEARCH ── */
     .search-form { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
     .search-form input { flex: 1; margin-top: 0; }
