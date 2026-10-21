@@ -58,6 +58,10 @@ DJANGO_SECRET_KEY=tests DJANGO_DEBUG=True .venv/bin/python manage.py runserver
 
 - Archivo de BD local: `db.sqlite3` (no commiteado).
 - Por defecto `DJANGO_DEBUG=True` y `DJANGO_SECRET_KEY` opcional en local.
+- **Secretos:** el `.env` real nunca se commitea (`.gitignore` lo bloquea); en el
+  repo solo vive `.env.example` con valores vacíos. Cada commit se escanea con
+  **gitleaks** (pre-commit) y GitHub tiene **secret scanning + push protection**
+  activados. Activación del hook: `.venv/bin/pip install pre-commit && .venv/bin/pre-commit install`.
 
 ## Despliegue en Render
 
